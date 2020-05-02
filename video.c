@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/time.h>
 #include <sys/ioctl.h>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -42,6 +43,25 @@ float min(float a, float b)
 		return(a);
 	else
 		return(b);
+}
+
+float getTime()
+{
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+
+	long int time = (long int)((tv.tv_sec) * 1000 + (tv.tv_usec) / 1000);
+	float timeF = (float)(time % 10000000) / 1000;
+
+	return(timeF);
+}
+
+int comparePixels(const Pixel pixel1, const Pixel pixel2)
+{
+	if(pixel1.r != pixel2.r || pixel1.g != pixel2.g || pixel1.b != pixel2.b)
+		return(1);
+
+	return(0);
 }
 
 int getWinX()
@@ -140,7 +160,7 @@ Image loadImage(const char PATH[], const float ZOOM)
 	return(image);
 }
 
-void displayImage(Image image)
+void updateScreen(Image image, Image prevImage)
 {
 	int height = image.height;
 	int width = image.width;
@@ -148,18 +168,30 @@ void displayImage(Image image)
 	{
 		for(int j = 0; j < width - 1; j++)
 		{
-			#define pixel1 image.pixels[i * width + j]
-			#define pixel2 image.pixels[(i + 1) * width + j]
+			#define cPixel1 image.pixels[i * width + j]
+			#define cPixel2 image.pixels[(i + 1) * width + j]
+			#define pPixel1 prevImage.pixels[i * width + j]
+			#define pPixel2 prevImage.pixels[(i + 1) * width + j]
 
-			printf("\x1b[48;2;%d;%d;%dm", pixel1.r, pixel1.g, pixel1.b);
-			printf("\x1b[38;2;%d;%d;%dm", pixel2.r, pixel2.g, pixel2.b);
+			if(
+				comparePixels(image.pixels[i * width + j], prevImage.pixels[i * width + j])
+				|| comparePixels(image.pixels[(i + 1) * width + j], prevImage.pixels[(i + 1) * width + j])
+			)
+			{
 
-			printf("▄");
-			printf("\x1b[0m");
+				printf("\033[%d;%dH", i / 2 + 1, j + 1);
+
+				printf("\x1b[48;2;%d;%d;%dm", cPixel1.r, cPixel1.g, cPixel1.b);
+				printf("\x1b[38;2;%d;%d;%dm", cPixel2.r, cPixel2.g, cPixel2.b);
+
+				printf("▄");
+				//printf("\x1b[0m");
+			}
+
 		}
-
-		printf("\n");
 	}
+
+	//getchar();
 }
 
 VideoInfo getVideoInfo(const char PATH[])
@@ -219,18 +251,45 @@ void playVideo(const VideoInfo INFO, const char *DIR, const int WINX, const int 
 		(float)WINY / (float)getImageY(path)
 	);
 
+	Image currentImage = loadImage(path, zoom);
+	Image previousImage;
+
+	int width = currentImage.width;
+	int height = currentImage.height;
+
+	previousImage.pixels = (Pixel*)malloc((width * height) * sizeof(Pixel));
+
+	for(int i = 0; i < height; i++)
+	{
+		for(int j = 0; j < width; j++)
+		{
+			Pixel c;
+			c.r = -1;
+			c.g = -1;
+			c.b = -1;
+			previousImage.pixels[i * width + j] = c;
+		}
+	}
+
+	float time = getTime();
+
 	for(int i = 0; i < INFO.frameCount; i++)
 	{
 		sprintf(path, "%s/frame%d.bmp", DIR, i + 1);
-		Image image = loadImage(path, zoom);
-		system("clear");
-		displayImage(image);
+		currentImage = loadImage(path, zoom);
+
+		while(getTime() - time < 1 / (float)INFO.fps){}
+
+		time = getTime();
+		updateScreen(currentImage, previousImage);
+		previousImage = currentImage;
 	}
 }
 
 void cleanup()
 {
 	system("rm -r /tmp/tmv.* >>/dev/null 2>>/dev/null");
+	system("clear");
 	exit(0);
 }
 
@@ -248,6 +307,7 @@ int main(const int argc, const char *argv[])
 
 	char *dir = openVideo(info);
 
+	system("clear");
 	playVideo(info, dir, winX, winY);
 
 	cleanup();
