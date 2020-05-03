@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include <dirent.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
 
@@ -16,8 +18,8 @@
 
 typedef struct VideoInfo
 {
-	char path[100];
-	char dir[100];
+	int width;
+	int height;
 	int fps;
 	int frameCount;
 	float duration;
@@ -64,42 +66,28 @@ int comparePixels(const Pixel pixel1, const Pixel pixel2)
 	return(0);
 }
 
-int getWinX()
+int getWinWidth()
 {
 	struct winsize size;
 	ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
 	return(size.ws_col);
 }
 
-int getWinY()
+int getWinHeight()
 {
 	struct winsize size;
 	ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
 	return((size.ws_row - 1) * 2);
 }
 
-int getImageX(const char PATH[])
-{
-	int width, height, components;
-	stbi_load(PATH, &width, &height, &components, 3);
-	return(width);
-}
-
-int getImageY(const char PATH[])
-{
-	int width, height, components;
-	stbi_load(PATH, &width, &height, &components, 3);
-	return(height);
-}
-
-Image loadImage(const char PATH[], const float ZOOM)
+Image loadImage(const char PATH[])
 {
 	int width, height, components;
 
 	// Load image
-	unsigned char *rawImage = stbi_load(PATH, &width, &height, &components, 3);
+	unsigned char *imageRaw = stbi_load(PATH, &width, &height, &components, 3);
 
-	if(rawImage == NULL)
+	if(imageRaw == NULL)
 	{
 		printf("ERROR: invalid image\n");
 		exit(1);
@@ -110,53 +98,27 @@ Image loadImage(const char PATH[], const float ZOOM)
 	);
 
 	Image image;
-	image.width = (int)(width * ZOOM);
-	image.height = (int)(height * ZOOM);
-	float pixelWidth = 1 / ZOOM;
+	image.height = height;
+	image.width = width;
+	image.pixels = (Pixel*)malloc((width * height) * sizeof(Pixel));
 
-	image.pixels
-		= (Pixel*)malloc((image.width * image.height) * sizeof(Pixel));
+	if(DEBUG) printf("DEBUG: loadImage: allocated memory for image\n");
 
-	for(int i = 0; i < image.height; i++)
+	// Convert image to better format
+	for(int i = 0; i < height; i++)
 	{
-		for(int j = 0; j < image.width; j++)
+		for(int j = 0; j < width; j++)
 		{
-			#define pixel image.pixels[i * image.width + j]
-			pixel.r = 0;
-			pixel.g = 0;
-			pixel.b = 0;
-			int count = 0;
-
-			for(float k = 0; k < pixelWidth; k += 0.1)
-			{
-				int xPos = (int)floor(j * pixelWidth + k);
-				int yPos = (int)floor(i * pixelWidth + k);
-
-				pixel.r += rawImage[yPos * width * 3 + xPos * 3];
-				pixel.g += rawImage[yPos * width * 3 + xPos * 3 + 1];
-				pixel.b += rawImage[yPos * width * 3 + xPos * 3 + 2];
-				count++;
-			}
-
-			pixel.r = (int)((float)pixel.r / (float)count);
-			pixel.g = (int)((float)pixel.g / (float)count);
-			pixel.b = (int)((float)pixel.b / (float)count);
-
-			if
-			(
-				pixel.r > 255 || pixel.g > 255 || pixel.b > 255
-				|| pixel.r < 0 || pixel.g < 0 || pixel.b < 0
-			)
-			{
-				printf
-				(
-					"ERROR: invalid color value (%d, %d, %d) @(%d, %d)\n",
-					pixel.r, pixel.g, pixel.b, j, i
-				);
-				exit(1);
-			}
+			image.pixels[i * width + j].r = imageRaw[i * width * 3 + j * 3];
+			image.pixels[i * width + j].g = imageRaw[i * width * 3 + j * 3 + 1];
+			image.pixels[i * width + j].b = imageRaw[i * width * 3 + j * 3 + 2];
 		}
 	}
+
+	if(DEBUG) printf("DEBUG: loadImage: converted raw image\n");
+
+	free(imageRaw);
+
 	return(image);
 }
 
@@ -185,89 +147,28 @@ void updateScreen(Image image, Image prevImage)
 				printf("\x1b[38;2;%d;%d;%dm", cPixel2.r, cPixel2.g, cPixel2.b);
 
 				printf("▄");
-				//printf("\x1b[0m");
 			}
-
 		}
 	}
-
-	//getchar();
 }
 
-VideoInfo getVideoInfo(const char PATH[])
+void playVideo(const VideoInfo INFO)
 {
-	AVFormatContext *formatContext = avformat_alloc_context();
-	avformat_open_input(&formatContext, PATH, NULL, NULL);
-	avformat_find_stream_info(formatContext,  NULL);
+	char dir[100];
+	sprintf(dir, "/home/%s/.tiv", getenv("USER"));
 
-	int streamIndex;
+	Image prevImage;
+	prevImage.pixels = (Pixel*)malloc((INFO.width * INFO.height) * sizeof(Pixel));
 
-	for(int i = 0; i < formatContext->nb_streams; i++)
+	for(int i = 0; i < INFO.height; i++)
 	{
-		AVCodecParameters *localCodecParameters = formatContext->streams[i]->codecpar;
-		if(localCodecParameters->codec_type == AVMEDIA_TYPE_VIDEO)
-			streamIndex = i;
-	}
-
-	VideoInfo info;
-	sprintf(info.path, "%s", PATH);
-	info.fps = formatContext->streams[streamIndex]->r_frame_rate.num;
-	info.duration = formatContext->duration / 1000000;
-	info.frameCount = formatContext->streams[streamIndex]->duration;
-
-	free(formatContext);
-
-	return(info);
-}
-
-char *openVideo(const VideoInfo INFO)
-{
-	char command[1000];
-
-	char template[] = "/tmp/tmv.XXXXXX";
-	char *dir = malloc(500);
-
-	sprintf(dir, "%s", mkdtemp(template));
-
-	sprintf(
-		command,
-		"ffmpeg -i %s -vf fps=%d %s/frame%%d.bmp >>/dev/null 2>>/dev/null",
-		INFO.path, INFO.fps, dir
-	);
-
-	system(command);
-
-	return(dir);
-
-}
-
-void playVideo(const VideoInfo INFO, const char *DIR, const int WINX, const int WINY)
-{
-	char path[100];
-	sprintf(path, "%s/frame1.bmp", DIR);
-
-	float zoom = min(
-		(float)WINX / (float)getImageX(path),
-		(float)WINY / (float)getImageY(path)
-	);
-
-	Image currentImage = loadImage(path, zoom);
-	Image previousImage;
-
-	int width = currentImage.width;
-	int height = currentImage.height;
-
-	previousImage.pixels = (Pixel*)malloc((width * height) * sizeof(Pixel));
-
-	for(int i = 0; i < height; i++)
-	{
-		for(int j = 0; j < width; j++)
+		for(int j = 0; j < INFO.width; j++)
 		{
 			Pixel c;
 			c.r = -1;
 			c.g = -1;
 			c.b = -1;
-			previousImage.pixels[i * width + j] = c;
+			prevImage.pixels[i * INFO.width + j] = c;
 		}
 	}
 
@@ -275,20 +176,65 @@ void playVideo(const VideoInfo INFO, const char *DIR, const int WINX, const int 
 
 	for(int i = 0; i < INFO.frameCount; i++)
 	{
-		sprintf(path, "%s/frame%d.bmp", DIR, i + 1);
-		currentImage = loadImage(path, zoom);
+		char path[1000];
+		sprintf(path, "%s/frame%d.bmp", dir, i + 1);
+		Image currentImage = loadImage(path);
+		remove(path);
 
 		while(getTime() - time < 1 / (float)INFO.fps){}
 
 		time = getTime();
-		updateScreen(currentImage, previousImage);
-		previousImage = currentImage;
+		updateScreen(currentImage, prevImage);
+		prevImage = currentImage;
 	}
+}
+
+VideoInfo getVideoInfo(const char PATH[])
+{
+	VideoInfo info;
+
+	AVFormatContext *formatCtx = avformat_alloc_context();
+	avformat_open_input(&formatCtx, PATH, NULL, NULL);
+	avformat_find_stream_info(formatCtx,  NULL);
+
+	int index;
+
+	for (int i = 0; i < formatCtx->nb_streams; i++)
+	{
+		AVCodecParameters *codecPram = formatCtx->streams[i]->codecpar;
+		if (codecPram->codec_type == AVMEDIA_TYPE_VIDEO) {
+			info.width = codecPram->width;
+			info.height = codecPram->height;
+			index = i;
+			break;
+		}
+	}
+
+	info.fps = formatCtx->streams[index]->r_frame_rate.num;
+	info.duration = formatCtx->duration / 1000000;
+	info.frameCount = formatCtx->streams[index]->duration;
+
+	free(formatCtx);
+
+	return(info);
 }
 
 void cleanup()
 {
-	system("rm -r /tmp/tmv.* >>/dev/null 2>>/dev/null");
+	char dirName[PATH_MAX];
+	sprintf(dirName, "/home/%s/.tiv", getenv("USER"));
+
+	DIR *dir = opendir(dirName);
+    struct dirent *next_file;
+    char filepath[NAME_MAX];
+
+    while((next_file = readdir(dir)) != NULL)
+    {
+        sprintf(filepath, "%s/%s", dirName, next_file->d_name);
+        remove(filepath);
+    }
+    closedir(dir);
+
 	system("clear");
 	exit(0);
 }
@@ -300,15 +246,31 @@ int main(const int argc, const char *argv[])
 	char PATH[100];
 	sprintf(PATH, "%s", argv[1]);
 
-	int winX = getWinX();
-	int winY = getWinY();
-
 	VideoInfo info = getVideoInfo(PATH);
 
-	char *dir = openVideo(info);
+	float zoom = min(
+		(float)getWinWidth() / (float)info.width,
+		(float)getWinHeight() / (float)info.height
+	);
+
+	char dir[100];
+	sprintf(dir, "/home/%s/.tiv", getenv("USER"));
+
+	struct stat sb;
+	if(stat(dir, &sb) != 0)
+	    mkdir(dir, 0700);
+
+	char command[1000];
+	sprintf(
+		command,
+		"ffmpeg -i %s -vf \"fps=%d, scale=%d:-1\" %s/frame%%d.bmp ",
+		PATH, info.fps, (int)(info.width * zoom), dir
+	);
+
+	system(command);
 
 	system("clear");
-	playVideo(info, dir, winX, winY);
+	playVideo(info);
 
 	cleanup();
 
