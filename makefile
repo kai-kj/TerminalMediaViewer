@@ -1,25 +1,41 @@
 CC = gcc
-RM = rm
+RM = rm -f
 
-IMAGE = image
-VIDEO = video
+TARGET = tmv
 
-ILIBS =
-VLIBS = -L/opt/ffmpeg/lib -I/opt/ffmpeg/include/
+LIBS = -L/opt/ffmpeg/lib -I/opt/ffmpeg/include/
 
-IFLAGS = -lm
-VFLAGS = -lm -lavcodec -lavformat -lavfilter -lavdevice -lswresample -lswscale -lavutil
+FLAGS = -lm -lavcodec -lavformat -lavfilter -lavdevice -lswresample -lswscale -lavutil
 
-all:
-	$(CC) $(ILIBS) $(IMAGE).c $(IFLAGS) -o $(IMAGE)
-	$(CC) $(VLIBS) $(VIDEO).c $(VFLAGS) -o $(VIDEO)
+debug: clean
+	@$(CC) $(LIBS) $(TARGET).c $(FLAGS) -D DEBUG -o $(TARGET)
 
-image:
-	$(CC) $(ILIBS) $(IMAGE).c $(IFLAGS) -o $(IMAGE)
+release: clean
+	@$(CC) $(LIBS) $(TARGET).c $(FLAGS) -o $(TARGET)
 
-video:
-	$(CC) $(VLIBS) $(VIDEO).c $(VFLAGS) -o $(VIDEO)
+test: debug
+	@clear
+	@echo "---- image test (press ENTER) ----"
+	@read
+	./$(TARGET) tests/iTest.*
+	@echo "---- (press ENTER) ----"
+	@read
+	@clear
+	@echo "---- video test (press ENTER) ----"
+	@read
+	./$(TARGET) tests/vTest.*
+
+test-release: release
+	@clear
+	@echo "---- image test (press ENTER) ----"
+	@read
+	@./$(TARGET) tests/iTest.*
+	@echo "---- (press ENTER) ----"
+	@read
+	@clear
+	@echo "---- video test (press ENTER) ----"
+	@read
+	@./$(TARGET) tests/vTest.*
 
 clean:
-	$(RM) $(IMAGE)
-	$(RM) $(VIDEO)
+	@$(RM) $(TARGET)
