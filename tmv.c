@@ -107,9 +107,11 @@ char doc[] =
 char args_doc[] = "INPUT";
 
 static struct argp_option options[] = {
-    {"fps", 'F', "FPS", 0, "Set fps" },
-    {"width", 'w', "WIDTH", 0, "Set width"},
-	{"height", 'h', "HEIGHT", 0, "Set height"},
+    {"fps", 'F', "FPS", 0, "Set fps." },
+    {"width", 'w', "WIDTH", 0, "Set width. Setting both width and height \
+will ignore original aspect ratio."},
+	{"height", 'h', "HEIGHT", 0, "Set height. Setting both width and height \
+will ignore original aspect ratio."},
 	{ 0 }
 };
 
@@ -370,12 +372,13 @@ Image loadImage(const char TARGET[])
 	return(image);
 }
 
-Image scaleImage(Image oldImage, float zoom)
+Image scaleImage(Image oldImage, float xZoom, float yZoom)
 {
 	Image newImage;
-	newImage.width = (int)(oldImage.width * zoom);
-	newImage.height = (int)(oldImage.height * zoom);
-	float pixelWidth = 1 / zoom;
+	newImage.width = (int)(oldImage.width * xZoom);
+	newImage.height = (int)(oldImage.height * yZoom);
+	float xPixelWidth = 1 / xZoom;
+	float yPixelWidth = 1 / yZoom;
 
 	newImage.pixels
 		= (Pixel*)malloc((newImage.width * newImage.height) * sizeof(Pixel));
@@ -391,16 +394,19 @@ Image scaleImage(Image oldImage, float zoom)
 			int count = 0;
 
 			// take the average of all points
-			for(float k = 0; k < pixelWidth; k += 0.1)
+			for(float k = 0; k < yPixelWidth; k += 0.1)
 			{
-				#define samplePoint oldImage.pixels\
-				[(int)(floor(i * pixelWidth + k) * oldImage.width)\
-				 + (int)floor(j * pixelWidth + k)]
+				for(float l = 0; l < xPixelWidth; l += 0.1)
+				{
+					#define samplePoint oldImage.pixels\
+					[(int)(floor(i * yPixelWidth + k) * oldImage.width)\
+					 + (int)floor(j * xPixelWidth + l)]
 
-				pixel.r += samplePoint.r;
-				pixel.g += samplePoint.g;
-				pixel.b += samplePoint.b;
-				count++;
+					pixel.r += samplePoint.r;
+					pixel.g += samplePoint.g;
+					pixel.b += samplePoint.b;
+					count++;
+				}
 			}
 
 			pixel.r = (int)((float)pixel.r / (float)count);
@@ -545,7 +551,10 @@ void cleanup()
 	DIR *dir = opendir(dirName);
 
 	if(dir == NULL)
-		error("failed to open dir");
+	{
+		debug("failed to open dir");
+		exit(0);
+	}
 
     struct dirent *next_file;
     char filepath[NAME_MAX * 2 + 1];
@@ -605,9 +614,8 @@ int main(int argc, char *argv[])
 			break;
 		}
 		else if(strcmp("END", vFormats[i]) == 0)
-		{
 			break;
-		}
+
 		i++;
 	}
 
@@ -621,7 +629,6 @@ int main(int argc, char *argv[])
 		Image image = loadImage(arguments.input);
 
 		int width, height;
-
 		if(arguments.width != -1)
 			width = arguments.width;
 		else
@@ -632,14 +639,27 @@ int main(int argc, char *argv[])
 		else
 			height = getWinHeight();
 
-		float zoom = min(
-			(float)width / image.width,
-			(float)height / image.height
-		);
+		float xZoom, yZoom;
+		if(arguments.width != -1 || arguments.height != -1)
+		{
+			xZoom = min(
+				(float)width / image.width,
+				(float)height / image.height
+			);
+			yZoom = min(
+				(float)width / image.width,
+				(float)height / image.height
+			);
+		}
+		else
+		{
+			xZoom = (float)width / image.width;
+			yZoom = (float)height / image.height;
+		}
 
-		debug("MAIN: got zoom %f", zoom);
+		debug("MAIN: got zoom %f %f", xZoom, yZoom);
 
-		image = scaleImage(image, zoom);
+		image = scaleImage(image, xZoom, yZoom);
 
 		displayImage(image);
 
