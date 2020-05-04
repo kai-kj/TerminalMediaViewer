@@ -8,15 +8,19 @@
 
 /*
 MIT License
+
 Copyright (c) 2020 Kai Kitagawa-Jones
+
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
+
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -24,6 +28,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
 */
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -39,6 +44,7 @@ SOFTWARE.
 #include <unistd.h>
 #include <signal.h>
 #include <dirent.h>
+#include <argp.h>
 
 //-------- POSIX libraries ---------------------------------------------------//
 
@@ -58,11 +64,11 @@ SOFTWARE.
 #include "stb_image.h"
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-// Types
+// Image / Video format lists
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-char vFormats[][25] = {"3dostr", "3g2", "3gp", "4xm", "a64", "aa", "aac", "ac3", "acm", "act", "adf", "adp", "ads", "adts", "adx", "aea", "afc", "aiff", "aix", "alaw", "alias_pix", "alsa", "amr", "amrnb", "amrwb", "anm", "apc", "ape", "apng", "aptx", "aptx_hd", "aqtitle", "asf", "asf_o", "asf_stream", "ass", "ast", "au", "avi", "avm2", "avr", "avs", "avs2", "bethsoftvid", "bfi", "bfstm", "bin", "bink", "bit", "bmp_pipe", "bmv", "boa", "brender_pix", "brstm", "c93", "caf", "cavsvideo", "cdg", "cdxl", "cine", "codec2", "codec2raw", "concat", "crc", "dash", "data", "daud", "dcstr", "dds_pipe", "dfa", "dhav", "dirac", "dnxhd", "dpx_pipe", "dsf", "dsicin", "dss", "dts", "dtshd", "dv", "dvbsub", "dvbtxt", "dvd", "dxa", "ea", "ea_cdata", "eac3", "epaf", "exr_pipe", "f32be", "f32le", "f4v", "f64be", "f64le", "fbdev", "ffmetadata", "fifo", "fifo_test", "film_cpk", "filmstrip", "fits", "flac", "flic", "flv", "framecrc", "framehash", "framemd5", "frm", "fsb", "g722", "g723_1", "g726", "g726le", "g729", "gdv", "genh", "gif", "gif_pipe", "gsm", "gxf", "h261", "h263", "h264", "hash", "hcom", "hds", "hevc", "hls", "hnm", "ico", "idcin", "idf", "iec61883", "iff", "ifv", "ilbc", "image2", "image2pipe", "ingenient", "ipmovie", "ipod", "ircam", "ismv", "iss", "iv8", "ivf", "ivr", "j2k_pipe", "jack", "jacosub", "jpeg_pipe", "jpegls_pipe", "jv", "kmsgrab", "kux", "latm", "lavfi", "libmodplug", "live_flv", "lmlm4", "loas", "lrc", "lvf", "lxf", "m4v", "matroska", "matroska", "md5", "mgsts", "microdvd", "mjpeg", "mjpeg_2000", "mkvtimestamp_v2", "mlp", "mlv", "mm", "mmf", "mov", "mov", "mp2", "mp3", "mp4", "mpc", "mpc8", "mpeg", "mpeg1video", "mpeg2video", "mpegts", "mpegtsraw", "mpegvideo", "mpjpeg", "mpl2", "mpsub", "msf", "msnwctcp", "mtaf", "mtv", "mulaw", "musx", "mv", "mvi", "mxf", "mxf_d10", "mxf_opatom", "mxg", "nc", "nistsphere", "nsp", "nsv", "null", "nut", "nuv", "oga", "ogg", "ogv", "oma", "opus", "oss", "paf", "pam_pipe", "pbm_pipe", "pcx_pipe", "pgm_pipe", "pgmyuv_pipe", "pictor_pipe", "pjs", "pmp", "png_pipe", "ppm_pipe", "psd_pipe", "psp", "psxstr", "pulse", "pva", "pvf", "qcp", "qdraw_pipe", "r3d", "rawvideo", "realtext", "redspark", "rl2", "rm", "roq", "rpl", "rsd", "rso", "rtp", "rtp_mpegts", "rtsp", "s16be", "s16le", "s24be", "s24le", "s32be", "s32le", "s337m", "s8", "sami", "sap", "sbc", "sbg", "scc", "sdl", "sdp", "sdr2", "sds", "sdx", "segment", "ser", "sgi_pipe", "shn", "siff", "singlejpeg", "sln", "smjpeg", "smk", "smoothstreaming", "smush", "sol", "sox", "spdif", "spx", "srt", "stl", "stream_segment", "subviewer", "subviewer1", "sunrast_pipe", "sup", "svag", "svcd", "svg_pipe", "swf", "tak", "tedcaptions", "tee", "thp", "tiertexseq", "tiff_pipe", "tmv", "truehd", "tta", "tty", "txd", "ty", "u16be", "u16le", "u24be", "u24le", "u32be", "u32le", "u8", "uncodedframecrc", "v210", "v210x", "vag", "vc1", "vc1test", "vcd", "vidc", "video4linux2", "vividas", "vivo", "vmd", "vob", "vobsub", "voc", "vpk", "vplayer", "vqf", "w64", "wav", "wc3movie", "webm", "webm_chunk", "webm_dash_manifest", "webp", "webp_pipe", "webvtt", "wsaud", "wsd", "wsvqa", "wtv", "wv", "wve", "x11grab", "xa", "xbin", "xmv", "xpm_pipe", "xv", "xvag", "xwd_pipe", "xwma", "yop", "yuv4mpegpip", "END"};
-
+#include "vFormatList.h"
+char vFormats[][25];
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Types
@@ -74,7 +80,6 @@ typedef struct VideoInfo
 	int height;
 	int fps;
 	int frameCount;
-	float duration;
 }VideoInfo;
 
 typedef struct Pixel
@@ -90,6 +95,70 @@ typedef struct Image
 	int height;
 	Pixel *pixels;
 }Image;
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+// Argp
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+char doc[] =
+	"This is a program for viewing images and videos in almost any terminal.\n"
+	"256 color and utf-8 support is necessary.";
+
+char args_doc[] = "INPUT";
+
+static struct argp_option options[] = {
+    {"fps", 'F', "FPS", 0, "Set fps" },
+    {"width", 'w', "WIDTH", 0, "Set width"},
+	{"height", 'h', "HEIGHT", 0, "Set height"},
+	{ 0 }
+};
+
+struct arguments {
+	char *input;
+	int fps;
+	int width;
+	int height;
+};
+
+static error_t parse_option(int key, char *arg, struct argp_state *state)
+{
+	struct arguments *arguments = state->input;
+
+	switch(key)
+	{
+		case ARGP_KEY_ARG:
+			if(state->arg_num == 0)
+				arguments->input = arg;
+			else
+				argp_usage( state );
+
+			break;
+		case 'F':
+			arguments->fps = atoi(arg);
+			break;
+		case 'w':
+			arguments->width = atoi(arg);
+			break;
+		case 'h':
+			arguments->height = atoi(arg);
+			break;
+		case ARGP_KEY_END:
+			if (arguments->input == NULL)
+				argp_usage( state );
+
+			break;
+		default:
+			return ARGP_ERR_UNKNOWN;
+	}
+	return 0;
+}
+
+struct argp argp = {
+	options,
+	parse_option,
+	args_doc,
+	doc
+};
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Debug
@@ -133,6 +202,8 @@ float min(float a, float b)
 		return(b);
 }
 
+
+
 float getTime()
 {
 	struct timeval tv;
@@ -152,9 +223,11 @@ int comparePixels(const Pixel pixel1, const Pixel pixel2)
 	return(0);
 }
 
-char *getExtension(const char *PATH) {
-    char *dot = strrchr(PATH, '.');
-    if(!dot || dot == PATH) return "";
+// get file extension
+
+char *getExtension(const char *TARGET) {
+    char *dot = strrchr(TARGET, '.');
+    if(!dot || dot == TARGET) return "";
     return dot + 1;
 }
 
@@ -184,17 +257,20 @@ void displayImage(Image image)
 {
 	int height = image.height;
 	int width = image.width;
-	for(int i = 0; i < height - 1; i += 2)
+	for(int i = 0; i < height - 1; i += 2) // update 2 pixels at once
 	{
 		for(int j = 0; j < width - 1; j++)
 		{
 			#define pixel1 image.pixels[i * width + j]
 			#define pixel2 image.pixels[(i + 1) * width + j]
 
+			// set foreground and background colors
 			printf("\x1b[48;2;%d;%d;%dm", pixel1.r, pixel1.g, pixel1.b);
 			printf("\x1b[38;2;%d;%d;%dm", pixel2.r, pixel2.g, pixel2.b);
 
 			printf("▄");
+
+			// reset colors
 			printf("\x1b[0m");
 		}
 
@@ -202,12 +278,14 @@ void displayImage(Image image)
 	}
 }
 
+// only updates changed pixels (-> faster than displayImage())
+
 void updateScreen(Image image, Image prevImage)
 {
 	int height = image.height;
 	int width = image.width;
 
-	for(int i = 0; i < height - 1; i += 2)
+	for(int i = 0; i < height - 1; i += 2) // update 2 pixels at once
 	{
 		for(int j = 0; j < width - 1; j++)
 		{
@@ -216,14 +294,22 @@ void updateScreen(Image image, Image prevImage)
 			#define pPixel1 prevImage.pixels[i * width + j]
 			#define pPixel2 prevImage.pixels[(i + 1) * width + j]
 
+			// draw only if pixel has changed
 			if(
-				comparePixels(image.pixels[i * width + j], prevImage.pixels[i * width + j])
-				|| comparePixels(image.pixels[(i + 1) * width + j], prevImage.pixels[(i + 1) * width + j])
+				comparePixels(
+					image.pixels[i * width + j],
+					prevImage.pixels[i * width + j]
+				)
+				|| comparePixels(
+					image.pixels[(i + 1) * width + j],
+					prevImage.pixels[(i + 1) * width + j]
+				)
 			)
 			{
-
+				// move cursor
 				printf("\033[%d;%dH", i / 2 + 1, j + 1);
 
+				// set foreground and background colors
 				printf("\x1b[48;2;%d;%d;%dm", cPixel1.r, cPixel1.g, cPixel1.b);
 				printf("\x1b[38;2;%d;%d;%dm", cPixel2.r, cPixel2.g, cPixel2.b);
 
@@ -237,28 +323,28 @@ void updateScreen(Image image, Image prevImage)
 // Image
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-int getImageWidth(const char PATH[])
+int getImageWidth(const char TARGET[])
 {
 	int width, height, components;
-	stbi_load(PATH, &width, &height, &components, 3);
+	stbi_load(TARGET, &width, &height, &components, 3);
 	return(width);
 }
 
-int getImageHeight(const char PATH[])
+int getImageHeight(const char TARGET[])
 {
 	int width, height, components;
-	stbi_load(PATH, &width, &height, &components, 3);
+	stbi_load(TARGET, &width, &height, &components, 3);
 	return(height);
 }
 
-Image loadImage(const char PATH[])
+Image loadImage(const char TARGET[])
 {
 	int width, height, components;
 
-	unsigned char *imageRaw = stbi_load(PATH, &width, &height, &components, 3);
+	unsigned char *imageRaw = stbi_load(TARGET, &width, &height, &components, 3);
 
 	if(imageRaw == NULL)
-		error("invalid image %s", PATH);
+		error("invalid image %s", TARGET);
 
 	Image image;
 	image.height = height;
@@ -268,7 +354,7 @@ Image loadImage(const char PATH[])
 	if(image.pixels == NULL)
 		error("failed to allocate memory for image");
 
-	// Convert image to better format
+	// Convert to "Image" type (easier to use)
 	for(int i = 0; i < height; i++)
 	{
 		for(int j = 0; j < width; j++)
@@ -304,6 +390,7 @@ Image scaleImage(Image oldImage, float zoom)
 			pixel.b = 0;
 			int count = 0;
 
+			// take the average of all points
 			for(float k = 0; k < pixelWidth; k += 0.1)
 			{
 				#define samplePoint oldImage.pixels\
@@ -320,6 +407,7 @@ Image scaleImage(Image oldImage, float zoom)
 			pixel.g = (int)((float)pixel.g / (float)count);
 			pixel.b = (int)((float)pixel.b / (float)count);
 
+			// check color
 			if
 			(
 				pixel.r > 255 || pixel.g > 255 || pixel.b > 255
@@ -357,6 +445,8 @@ void playVideo(const VideoInfo INFO)
 
 	debug("playVideo: allocated memory for prevImage");
 
+	// initialize all colors to -1 to force update when calling updateScreen()
+	// for the first time
 	for(int i = 0; i < INFO.height; i++)
 	{
 		for(int j = 0; j < INFO.width; j++)
@@ -376,12 +466,14 @@ void playVideo(const VideoInfo INFO)
 
 	for(int i = 0; i < INFO.frameCount - 1; i++)
 	{
-		char path[1000];
-		sprintf(path, "%s/frame%d.bmp", dir, i + 1);
-		if(access(path, F_OK) != -1 )
+		char TARGET[1000];
+		sprintf(TARGET, "%s/frame%d.bmp", dir, i + 1);
+		if(access(TARGET, F_OK) != -1 )
 		{
-			Image currentImage = loadImage(path);
-			remove(path);
+			Image currentImage = loadImage(TARGET);
+
+			// delete used images
+			remove(TARGET);
 
 			while(getTime() - time < 1 / (float)INFO.fps){}
 
@@ -390,15 +482,13 @@ void playVideo(const VideoInfo INFO)
 			prevImage = currentImage;
 		}
 		else
-		{
 			break;
-		}
 	}
 
 	debug("playVideo: end time %f[s], duration %f", getTime(), getTime() - t);
 }
 
-VideoInfo getVideoInfo(const char PATH[])
+VideoInfo getVideoInfo(const char TARGET[])
 {
 	VideoInfo info;
 
@@ -409,7 +499,7 @@ VideoInfo getVideoInfo(const char PATH[])
 
 	debug("getVideoInfo: allocated memory for formatCtx");
 
-	avformat_open_input(&formatCtx, PATH, NULL, NULL);
+	avformat_open_input(&formatCtx, TARGET, NULL, NULL);
 	avformat_find_stream_info(formatCtx,  NULL);
 
 	int index;
@@ -426,12 +516,11 @@ VideoInfo getVideoInfo(const char PATH[])
 	}
 
 	info.fps = formatCtx->streams[index]->r_frame_rate.num;
-	info.duration = formatCtx->duration / 1000000;
 	info.frameCount = formatCtx->streams[index]->duration;
 
 	debug(
-		"getVideoInfo: got video info {(%d * %d), fps = %d, duration = %f, frameCount = %d}",
-		info.width, info.height, info.fps, info.duration, info.frameCount
+		"getVideoInfo: got video info {(%d * %d), fps = %d, frameCount = %d}",
+		info.width, info.height, info.fps, info.frameCount
 	);
 
 	free(formatCtx);
@@ -445,6 +534,7 @@ VideoInfo getVideoInfo(const char PATH[])
 
 void cleanup()
 {
+	// move cursor to bottom right and reset colors
 	printf("\x1b[0m \033[%d;%dH \n", getWinWidth(), getWinHeight());
 
 	char dirName[NAME_MAX];
@@ -462,6 +552,7 @@ void cleanup()
 
 	int count = 0;
 
+	// delete all images that were left
     while((next_file = readdir(dir)) != NULL)
     {
         sprintf(filepath, "%s/%s", dirName, next_file->d_name);
@@ -479,24 +570,33 @@ void cleanup()
 // Main
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-int main(const int argc, const char *argv[])
+int main(int argc, char *argv[])
 {
+	// cleanup on ctr+c
 	signal(SIGINT, cleanup);
 
-	char PATH[100];
-	sprintf(PATH, "%s", argv[1]);
+	// setup argp
+	struct arguments arguments = {0};
 
-	debug("MAIN: target %s", PATH);
+	// default values
+	arguments.fps = -1;
+	arguments.width = -1;
+	arguments.height = -1;
+
+	argp_parse( &argp, argc, argv, 0, 0, &arguments );
+
+	debug("MAIN: target %s", arguments.input);
 
 	// 1: image, 2: video
 	int fileType = 1;
 
-	char *ext = getExtension(PATH);
+	char *ext = getExtension(arguments.input);
 
 	debug("MAIN: got extension %s", ext);
 
 	int i = 0;
 
+	// check if target is video
 	while(vFormats[i])
 	{
 		if(strcmp(ext, vFormats[i]) == 0)
@@ -516,14 +616,25 @@ int main(const int argc, const char *argv[])
 	if(fileType == 1)
 	{
 		// image
-
 		debug("MAIN: image");
 
-		Image image = loadImage(PATH);
+		Image image = loadImage(arguments.input);
+
+		int width, height;
+
+		if(arguments.width != -1)
+			width = arguments.width;
+		else
+			width = getWinWidth();
+
+		if(arguments.height != -1)
+			width = arguments.height;
+		else
+			height = getWinHeight();
 
 		float zoom = min(
-			(float)getWinWidth() / image.width,
-			(float)getWinHeight() / image.height
+			(float)width / image.width,
+			(float)height / image.height
 		);
 
 		debug("MAIN: got zoom %f", zoom);
@@ -536,11 +647,11 @@ int main(const int argc, const char *argv[])
 	else
 	{
 		// video
-
 		debug("MAIN: video");
 
-		VideoInfo info = getVideoInfo(PATH);
+		VideoInfo info = getVideoInfo(arguments.input);
 
+		// resize images before starting video
 		float zoom = min(
 			(float)getWinWidth() / (float)info.width,
 			(float)getWinHeight() / (float)info.height
@@ -554,6 +665,8 @@ int main(const int argc, const char *argv[])
 		debug("MAIN: image dir %s", dir);
 
 		struct stat sb;
+
+		// make ~/./tmv folder if none exists
 		if(stat(dir, &sb) != 0)
 		{
 			mkdir(dir, 0700);
@@ -564,13 +677,15 @@ int main(const int argc, const char *argv[])
 		sprintf(
 			command,
 			"ffmpeg -i %s -vf \"fps=%d, scale=%d:-1\" %s/frame%%d.bmp >>/dev/null 2>>/dev/null",
-			PATH, info.fps, (int)(info.width * zoom), dir
+			arguments.input, info.fps, (int)(info.width * zoom), dir
 		);
 
 		debug("MAIN: decoded video");
 
+		// decode video with ffmpeg into bmp files
 		system(command);
 
+		// play the video
 		playVideo(info);
 	}
 
