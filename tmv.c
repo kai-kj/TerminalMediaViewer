@@ -97,6 +97,37 @@ typedef struct Image
 }Image;
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+// Debug
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+int debug(const char *fmt, ...)
+{
+	#ifdef DEBUG
+	char msg[4096];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, args);
+	printf("DEBUG: %s\n", msg);
+	getchar();
+    va_end(args);
+    return 0;
+	#else
+	return 1;
+	#endif
+}
+
+void error(const char *fmt, ...)
+{
+	char msg[4096];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, args);
+	printf("ERROR: %s\n", msg);
+    va_end(args);
+	exit(1);
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Argp
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
@@ -115,7 +146,7 @@ will ignore original aspect ratio."},
 	{ 0 }
 };
 
-struct arguments {
+struct args {
 	char *input;
 	int fps;
 	int width;
@@ -124,28 +155,28 @@ struct arguments {
 
 static error_t parse_option(int key, char *arg, struct argp_state *state)
 {
-	struct arguments *arguments = state->input;
+	struct args *args = state->input;
 
 	switch(key)
 	{
 		case ARGP_KEY_ARG:
 			if(state->arg_num == 0)
-				arguments->input = arg;
+				args->input = arg;
 			else
 				argp_usage( state );
 
 			break;
 		case 'F':
-			arguments->fps = atoi(arg);
+			args->fps = atoi(arg);
 			break;
 		case 'w':
-			arguments->width = atoi(arg);
+			args->width = atoi(arg);
 			break;
 		case 'h':
-			arguments->height = atoi(arg);
+			args->height = atoi(arg);
 			break;
 		case ARGP_KEY_END:
-			if (arguments->input == NULL)
+			if (args->input == NULL)
 				argp_usage( state );
 
 			break;
@@ -161,36 +192,6 @@ struct argp argp = {
 	args_doc,
 	doc
 };
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-// Debug
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-
-int debug(const char *fmt, ...)
-{
-	#ifdef DEBUG
-	char msg[4096];
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(msg, sizeof(msg), fmt, args);
-	printf("DEBUG: %s\n", msg);
-    va_end(args);
-    return 0;
-	#else
-	return 1;
-	#endif
-}
-
-void error(const char *fmt, ...)
-{
-	char msg[4096];
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(msg, sizeof(msg), fmt, args);
-	printf("ERROR: %s\n", msg);
-    va_end(args);
-	exit(1);
-}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Misc
@@ -432,6 +433,51 @@ Image scaleImage(Image oldImage, float xZoom, float yZoom)
 	return(newImage);
 }
 
+void image(const int WIDTH, const int HEIGHT, const char INPUT[])
+{
+	debug("image: image");
+
+	Image image = loadImage(INPUT);
+
+	int width, height;
+
+	if(WIDTH != -1)
+		width = WIDTH;
+	else
+		width = getWinWidth();
+
+	if(HEIGHT != -1)
+		height = HEIGHT;
+	else
+		height = getWinHeight();
+
+	debug("image: image dimensions (%d * %d)", width, height);
+
+	float xZoom, yZoom;
+	if(WIDTH == -1 || HEIGHT == -1)
+	{
+		xZoom = min(
+			(float)width / (float)image.width,
+			(float)height / (float)image.height
+		);
+		yZoom = min(
+			(float)width / (float)image.width,
+			(float)height / (float)image.height
+		);
+	}
+	else
+	{
+		xZoom = (float)width / (float)image.width;
+		yZoom = (float)height / (float)image.height;
+	}
+
+	debug("image: got zoom %f %f", xZoom, yZoom);
+
+	image = scaleImage(image, xZoom, yZoom);
+
+	displayImage(image);
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Video
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -534,6 +580,77 @@ VideoInfo getVideoInfo(const char TARGET[])
 	return(info);
 }
 
+void video(const int WIDTH, const int HEIGHT, const int FPS, const char INPUT[])
+{
+	debug("MAIN: video");
+
+	VideoInfo info = getVideoInfo(INPUT);
+
+	int width, height;
+
+	if(WIDTH != -1)
+		width = WIDTH;
+	else
+		width = getWinWidth();
+
+	if(HEIGHT != -1)
+		height = HEIGHT;
+	else
+		height = getWinHeight();
+
+	debug("image: image dimensions (%d * %d)", width, height);
+
+	float xZoom, yZoom;
+	if(WIDTH == -1 || HEIGHT == -1)
+	{
+		xZoom = min(
+			(float)width / (float)info.width,
+			(float)height / (float)info.height
+		);
+		yZoom = min(
+			(float)width / (float)info.width,
+			(float)height / (float)info.height
+		);
+	}
+	else
+	{
+		xZoom = (float)width / (float)info.width;
+		yZoom = (float)height / (float)info.height;
+	}
+
+	debug("image: got zoom %f %f", xZoom, yZoom);
+
+	char dir[100];
+	sprintf(dir, "/home/%s/.tiv", getenv("USER"));
+
+	debug("MAIN: image dir %s", dir);
+
+	struct stat sb;
+
+	// make ~/./tmv folder if none exists
+	if(stat(dir, &sb) != 0)
+	{
+		mkdir(dir, 0700);
+		debug("MAIN: no image dir, created");
+	}
+
+	char command[1000];
+	sprintf(
+		command,
+		"ffmpeg -i %s -vf \"fps=%d, scale=%d:%d\" %s/frame%%d.bmp >>/dev/null 2>>/dev/null",
+		INPUT, info.fps, (int)(info.width * xZoom), (int)(info.height * yZoom),
+		dir
+	);
+
+	debug("MAIN: decoded video");
+
+	// decode video with ffmpeg into bmp files
+	system(command);
+
+	// play the video
+	playVideo(info);
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Cleanup
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -585,21 +702,21 @@ int main(int argc, char *argv[])
 	signal(SIGINT, cleanup);
 
 	// setup argp
-	struct arguments arguments = {0};
+	struct args args = {0};
 
 	// default values
-	arguments.fps = -1;
-	arguments.width = -1;
-	arguments.height = -1;
+	args.fps = -1;
+	args.width = -1;
+	args.height = -1;
 
-	argp_parse( &argp, argc, argv, 0, 0, &arguments );
+	argp_parse(&argp, argc, argv, 0, 0, &args);
 
-	debug("MAIN: target %s", arguments.input);
+	debug("MAIN: target %s", args.input);
 
 	// 1: image, 2: video
 	int fileType = 1;
 
-	char *ext = getExtension(arguments.input);
+	char *ext = getExtension(args.input);
 
 	debug("MAIN: got extension %s", ext);
 
@@ -619,94 +736,12 @@ int main(int argc, char *argv[])
 		i++;
 	}
 
-	debug("%d", fileType);
-
 	if(fileType == 1)
-	{
-		// image
-		debug("MAIN: image");
+		image(args.width, args.height, args.input);
 
-		Image image = loadImage(arguments.input);
-
-		int width, height;
-		if(arguments.width != -1)
-			width = arguments.width;
-		else
-			width = getWinWidth();
-
-		if(arguments.height != -1)
-			width = arguments.height;
-		else
-			height = getWinHeight();
-
-		float xZoom, yZoom;
-		if(arguments.width != -1 || arguments.height != -1)
-		{
-			xZoom = min(
-				(float)width / image.width,
-				(float)height / image.height
-			);
-			yZoom = min(
-				(float)width / image.width,
-				(float)height / image.height
-			);
-		}
-		else
-		{
-			xZoom = (float)width / image.width;
-			yZoom = (float)height / image.height;
-		}
-
-		debug("MAIN: got zoom %f %f", xZoom, yZoom);
-
-		image = scaleImage(image, xZoom, yZoom);
-
-		displayImage(image);
-
-	}
 	else
 	{
-		// video
-		debug("MAIN: video");
-
-		VideoInfo info = getVideoInfo(arguments.input);
-
-		// resize images before starting video
-		float zoom = min(
-			(float)getWinWidth() / (float)info.width,
-			(float)getWinHeight() / (float)info.height
-		);
-
-		debug("MAIN: got zoom %f", zoom);
-
-		char dir[100];
-		sprintf(dir, "/home/%s/.tiv", getenv("USER"));
-
-		debug("MAIN: image dir %s", dir);
-
-		struct stat sb;
-
-		// make ~/./tmv folder if none exists
-		if(stat(dir, &sb) != 0)
-		{
-			mkdir(dir, 0700);
-			debug("MAIN: no image dir, created");
-		}
-
-		char command[1000];
-		sprintf(
-			command,
-			"ffmpeg -i %s -vf \"fps=%d, scale=%d:-1\" %s/frame%%d.bmp >>/dev/null 2>>/dev/null",
-			arguments.input, info.fps, (int)(info.width * zoom), dir
-		);
-
-		debug("MAIN: decoded video");
-
-		// decode video with ffmpeg into bmp files
-		system(command);
-
-		// play the video
-		playVideo(info);
+		video(args.width, args.height, args.fps, args.input);
 	}
 
 	debug("MAIN: cleanup");
