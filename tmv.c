@@ -391,12 +391,6 @@ Audio playAudio(const char PATH[])
     return(audio);
 }
 
-void stopAudio(Audio audio)
-{
-    ma_device_uninit(&audio.device);
-    ma_decoder_uninit(&audio.decoder);
-}
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Image
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -622,8 +616,6 @@ void playVideo(const VideoInfo INFO)
 		i++;
 	}
 
-	stopAudio(audio);
-
 	debug("playVideo: end time %f[s], duration %f", getTime(), getTime() - t);
 }
 
@@ -807,12 +799,6 @@ int main(int argc, char *argv[])
 {
 	// cleanup on ctr+c
 	signal(SIGINT, cleanup);
-
-	/*Audio audio = playAudio("music.wav");
-
-	getchar();
-
-	stopAudio(audio);*/
 
 	// setup argp
 	struct args args = {0};
