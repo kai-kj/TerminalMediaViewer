@@ -15,3 +15,6 @@ debug: clean
 
 clean:
 	@$(RM) $(TARGET)
+
+depend:
+	@$(CC) $(LIBS) $(TARGET).c $(FLAGS) -M

@@ -51,6 +51,7 @@ SOFTWARE.
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
+#include<sys/wait.h>
 
 //-------- ffmpeg ------------------------------------------------------------//
 
@@ -76,6 +77,13 @@ SOFTWARE.
 
 #include "vFormatList.h"
 char vFormats[][25];
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+// Defines
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+#define DEFAULT_FPS 15
+#define TMP_FOLDER "/tmp/tmv"
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Types
@@ -151,8 +159,8 @@ char doc[] =
 char args_doc[] = "INPUT";
 
 static struct argp_option options[] = {
-    {"fps", 'f', "TARGET FPS", 0, "Set fps. Default 10 fps" },
-	{"origfps", 'F', 0, 0, "Use original fps from video. Default 10 fps" },
+    {"fps", 'f', "TARGET FPS", 0, "Set fps. Default 15 fps" },
+	{"origfps", 'F', 0, 0, "Use original fps from video. Default 15 fps" },
     {"width", 'w', "WIDTH", 0, "Set width. Setting both width and height \
 will ignore original aspect ratio."},
 	{"height", 'h', "HEIGHT", 0, "Set height. Setting both width and height \
@@ -553,8 +561,7 @@ void image(const int WIDTH, const int HEIGHT, const char INPUT[])
 
 void playVideo(const VideoInfo INFO)
 {
-	char dir[100];
-	sprintf(dir, "/home/%s/.tiv", getenv("USER"));
+	char dir[] = TMP_FOLDER;
 
 	debug("playVideo: image dir %s", dir);
 
@@ -587,7 +594,9 @@ void playVideo(const VideoInfo INFO)
 
 	char audioDir[1000];
 	sprintf(audioDir, "%s/audio.wav", dir);
-	Audio audio = playAudio(audioDir);
+	playAudio(audioDir);
+
+
 
 	int i = 0;
 
@@ -703,51 +712,62 @@ void video(
 	debug("image: got zoom %f %f", xZoom, yZoom);
 
 	if(FLAG == 0)
-		info.fps = 15;
+		info.fps = DEFAULT_FPS;
 
 	if(FPS != -1)
 		info.fps = FPS;
 
-	char dir[100];
-	sprintf(dir, "/home/%s/.tiv", getenv("USER"));
+	char dir[] = TMP_FOLDER;
 
 	debug("MAIN: image dir %s", dir);
 
 	struct stat sb;
 
-	// make ~/./tmv folder if none exists
+	// make /tmp/tmv folder if none exists
 	if(stat(dir, &sb) != 0)
 	{
 		mkdir(dir, 0700);
 		debug("MAIN: no image dir, created");
 	}
 
-	char command[1000];
+	// decode video with ffmpeg into audio
+	char commandA[1000];
 	sprintf(
-		command,
+		commandA,
+		"ffmpeg -i %s -f wav %s/audio.wav >>/dev/null 2>>/dev/null",
+		INPUT, dir
+	);
+
+	// decode video with ffmpeg into bmp files
+	char commandB[1000];
+	sprintf(
+		commandB,
 		"ffmpeg -i %s -vf \"fps=%d, scale=%d:%d\" %s/frame%%d.bmp >>/dev/null 2>>/dev/null",
 		INPUT, info.fps, (int)(info.width * xZoom), (int)(info.height * yZoom),
 		dir
 	);
 
-	// decode video with ffmpeg into bmp files
-	system(command);
+	// child = plays video, parent = decodes
+	int pid = fork();
 
-	debug("MAIN: decoded video");
+	if(pid == 0)
+	{
 
-	sprintf(
-		command,
-		"ffmpeg -i %s -f wav %s/audio.wav >>/dev/null 2>>/dev/null",
-		INPUT, dir
-	);
-
-	// decode video with ffmpeg into audio
-	system(command);
-
-	debug("MAIN: decoded video");
-
-	// play the video
-	playVideo(info);
+		char TARGET[1000];
+		sprintf(TARGET, "%s/frame%d.bmp", dir, 1);
+		// wait for first image (ffmpeg takes time to start)
+		while(access(TARGET, F_OK) == -1){}
+		// play the video
+		playVideo(info);
+	}
+	else
+	{
+		// audio first
+		system(commandA);
+		system(commandB);
+		// wait for video to finish
+		wait(NULL);
+	}
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -759,8 +779,7 @@ void cleanup()
 	// move cursor to bottom right and reset colors
 	printf("\x1b[0m \033[%d;%dH \n", getWinWidth(), getWinHeight());
 
-	char dirName[NAME_MAX];
-	sprintf(dirName, "/home/%s/.tiv", getenv("USER"));
+	char dirName[] = TMP_FOLDER;
 
 	debug("cleanup: image dir [%s]", dirName);
 
