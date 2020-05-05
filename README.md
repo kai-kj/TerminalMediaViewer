@@ -1,5 +1,5 @@
 <p align="center">
-	<p align="center" style="font-size:40px"><b>Terminal Media Viewer</b></p>
+	<p align="center"><h3><b>Terminal Media Viewer</b></h3></p>
 	<p align="center"><b>View images and videos without leaving the console</b></p>
 	<p align="center">
 	<img src="https://img.shields.io/github/license/kal39/TerminalMediaViewer">
