@@ -5,7 +5,7 @@ TARGET = tmv
 
 LIBS = -L/opt/ffmpeg/lib -I/opt/ffmpeg/include/
 
-FLAGS = -lm -lavcodec -lavformat -lavfilter -lavdevice -lswresample -lswscale -lavutil
+FLAGS = -lm -lavcodec -lavformat -lavfilter -lavdevice -lswresample -lswscale -lavutil -lpthread -ldl
 
 release: clean
 	@$(CC) $(LIBS) $(TARGET).c $(FLAGS) -o $(TARGET)

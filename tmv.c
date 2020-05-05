@@ -63,6 +63,13 @@ SOFTWARE.
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+// audio <https://github.com/dr-soft/miniaudio>
+#define DR_WAV_IMPLEMENTATION
+#include "dr_wav.h"
+
+#define MINIAUDIO_IMPLEMENTATION
+#include "miniaudio.h"
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Image / Video format lists
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -95,6 +102,12 @@ typedef struct Image
 	int height;
 	Pixel *pixels;
 }Image;
+
+typedef struct Audio
+{
+	ma_decoder decoder;
+	ma_device device;
+}Audio;
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Debug
@@ -138,7 +151,8 @@ char doc[] =
 char args_doc[] = "INPUT";
 
 static struct argp_option options[] = {
-    {"fps", 'F', "FPS", 0, "Set fps." },
+    {"fps", 'f', "TARGET FPS", 0, "Set fps. Default 10 fps" },
+	{"origfps", 'F', 0, 0, "Use original fps from video. Default 10 fps" },
     {"width", 'w', "WIDTH", 0, "Set width. Setting both width and height \
 will ignore original aspect ratio."},
 	{"height", 'h', "HEIGHT", 0, "Set height. Setting both width and height \
@@ -149,6 +163,7 @@ will ignore original aspect ratio."},
 struct args {
 	char *input;
 	int fps;
+	int fpsFlag;
 	int width;
 	int height;
 };
@@ -166,8 +181,11 @@ static error_t parse_option(int key, char *arg, struct argp_state *state)
 				argp_usage( state );
 
 			break;
-		case 'F':
+		case 'f':
 			args->fps = atoi(arg);
+			break;
+		case 'F':
+			args->fpsFlag = 1;
 			break;
 		case 'w':
 			args->width = atoi(arg);
@@ -320,6 +338,63 @@ void updateScreen(Image image, Image prevImage)
 			}
 		}
 	}
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+// Audio
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
+{
+    ma_decoder* pDecoder = (ma_decoder*)pDevice->pUserData;
+    if (pDecoder == NULL) {
+        return;
+    }
+
+    ma_decoder_read_pcm_frames(pDecoder, pOutput, frameCount);
+
+    (void)pInput;
+}
+
+Audio playAudio(const char PATH[])
+{
+	Audio audio;
+
+    ma_result result;
+    ma_decoder decoder;
+    ma_device_config deviceConfig;
+    ma_device device;
+
+    result = ma_decoder_init_file(PATH, NULL, &decoder);
+
+	if(result != MA_SUCCESS)
+	{
+		audio.device = device;
+		audio.decoder = decoder;
+		return(audio);
+	}
+
+    deviceConfig = ma_device_config_init(ma_device_type_playback);
+    deviceConfig.playback.format   = decoder.outputFormat;
+    deviceConfig.playback.channels = decoder.outputChannels;
+    deviceConfig.sampleRate        = decoder.outputSampleRate;
+    deviceConfig.dataCallback      = data_callback;
+    deviceConfig.pUserData         = &decoder;
+
+    ma_device_init(NULL, &deviceConfig, &device);
+
+    ma_device_start(&device);
+
+	audio.device = device;
+	audio.decoder = decoder;
+
+    return(audio);
+}
+
+void stopAudio(Audio audio)
+{
+    ma_device_uninit(&audio.device);
+    ma_decoder_uninit(&audio.decoder);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -516,7 +591,13 @@ void playVideo(const VideoInfo INFO)
 
 	debug("playVideo: start time %f[s], frames %d", time, INFO.frameCount);
 
-	for(int i = 0; i < INFO.frameCount - 1; i++)
+	char audioDir[1000];
+	sprintf(audioDir, "%s/audio.wav", dir);
+	Audio audio = playAudio(audioDir);
+
+	int i = 0;
+
+	while(1)
 	{
 		char TARGET[1000];
 		sprintf(TARGET, "%s/frame%d.bmp", dir, i + 1);
@@ -534,8 +615,14 @@ void playVideo(const VideoInfo INFO)
 			prevImage = currentImage;
 		}
 		else
+		{
+			debug("playVideo: next file not found");
 			break;
+		}
+		i++;
 	}
+
+	stopAudio(audio);
 
 	debug("playVideo: end time %f[s], duration %f", getTime(), getTime() - t);
 }
@@ -580,7 +667,10 @@ VideoInfo getVideoInfo(const char TARGET[])
 	return(info);
 }
 
-void video(const int WIDTH, const int HEIGHT, const int FPS, const char INPUT[])
+void video(
+	const int WIDTH, const int HEIGHT,
+	const int FPS, const int FLAG, const char INPUT[]
+)
 {
 	debug("MAIN: video");
 
@@ -620,6 +710,12 @@ void video(const int WIDTH, const int HEIGHT, const int FPS, const char INPUT[])
 
 	debug("image: got zoom %f %f", xZoom, yZoom);
 
+	if(FLAG == 0)
+		info.fps = 15;
+
+	if(FPS != -1)
+		info.fps = FPS;
+
 	char dir[100];
 	sprintf(dir, "/home/%s/.tiv", getenv("USER"));
 
@@ -642,10 +738,21 @@ void video(const int WIDTH, const int HEIGHT, const int FPS, const char INPUT[])
 		dir
 	);
 
-	debug("MAIN: decoded video");
-
 	// decode video with ffmpeg into bmp files
 	system(command);
+
+	debug("MAIN: decoded video");
+
+	sprintf(
+		command,
+		"ffmpeg -i %s -f wav %s/audio.wav >>/dev/null 2>>/dev/null",
+		INPUT, dir
+	);
+
+	// decode video with ffmpeg into audio
+	system(command);
+
+	debug("MAIN: decoded video");
 
 	// play the video
 	playVideo(info);
@@ -701,11 +808,18 @@ int main(int argc, char *argv[])
 	// cleanup on ctr+c
 	signal(SIGINT, cleanup);
 
+	/*Audio audio = playAudio("music.wav");
+
+	getchar();
+
+	stopAudio(audio);*/
+
 	// setup argp
 	struct args args = {0};
 
 	// default values
 	args.fps = -1;
+	args.fpsFlag = 0;
 	args.width = -1;
 	args.height = -1;
 
@@ -741,7 +855,7 @@ int main(int argc, char *argv[])
 
 	else
 	{
-		video(args.width, args.height, args.fps, args.input);
+		video(args.width, args.height, args.fps, args.fpsFlag, args.input);
 	}
 
 	debug("MAIN: cleanup");
