@@ -62,14 +62,14 @@ SOFTWARE.
 
 // reading images <https://github.com/nothings/stb>
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "include/stb_image.h"
 
 // audio <https://github.com/dr-soft/miniaudio>
 #define DR_WAV_IMPLEMENTATION
-#include "dr_wav.h"
+#include "include/dr_wav.h"
 
 #define MINIAUDIO_IMPLEMENTATION
-#include "miniaudio.h"
+#include "include/miniaudio.h"
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Image / Video format lists
@@ -121,6 +121,11 @@ typedef struct Audio
 	ma_device device;
 }Audio;
 
+void freeImage(Image image)
+{
+	free(image.pixels);
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Debug
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -155,6 +160,10 @@ void error(const char *fmt, ...)
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Argp
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+const char *argp_program_version = "tmv 0.1";
+
+const char *argp_program_bug_address = "<kal390983@gmail.com>";
 
 char doc[] =
 	"This is a program for viewing images and videos in almost any terminal.\n"
@@ -368,10 +377,8 @@ void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uin
     (void)pInput;
 }
 
-Audio playAudio(const char PATH[])
+void playAudio(const char PATH[])
 {
-	Audio audio;
-
     ma_result result;
     ma_decoder decoder;
     ma_device_config deviceConfig;
@@ -380,11 +387,7 @@ Audio playAudio(const char PATH[])
     result = ma_decoder_init_file(PATH, NULL, &decoder);
 
 	if(result != MA_SUCCESS)
-	{
-		audio.device = device;
-		audio.decoder = decoder;
-		return(audio);
-	}
+		return;
 
     deviceConfig = ma_device_config_init(ma_device_type_playback);
     deviceConfig.playback.format   = decoder.outputFormat;
@@ -396,11 +399,6 @@ Audio playAudio(const char PATH[])
     ma_device_init(NULL, &deviceConfig, &device);
 
     ma_device_start(&device);
-
-	audio.device = device;
-	audio.decoder = decoder;
-
-    return(audio);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -409,15 +407,15 @@ Audio playAudio(const char PATH[])
 
 int getImageWidth(const char TARGET[])
 {
-	int width, height, components;
-	stbi_load(TARGET, &width, &height, &components, 3);
+	int width = -1;
+	stbi_load(TARGET, &width, NULL, NULL, 3);
 	return(width);
 }
 
 int getImageHeight(const char TARGET[])
 {
-	int width, height, components;
-	stbi_load(TARGET, &width, &height, &components, 3);
+	int height = -1;
+	stbi_load(TARGET, NULL, &height, NULL, 3);
 	return(height);
 }
 
@@ -557,6 +555,8 @@ void image(const int WIDTH, const int HEIGHT, const char INPUT[])
 	image = scaleImage(image, xZoom, yZoom);
 
 	displayImage(image);
+
+	freeImage(image);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -600,8 +600,6 @@ void playVideo(const VideoInfo INFO)
 	sprintf(audioDir, "%s/audio.wav", dir);
 	playAudio(audioDir);
 
-
-
 	int i = 0;
 
 	while(1)
@@ -620,15 +618,19 @@ void playVideo(const VideoInfo INFO)
 			time = getTime();
 			updateScreen(currentImage, prevImage);
 			prevImage = currentImage;
+
+			freeImage(currentImage);
 		}
 		else
 		{
 			debug("playVideo: next file not found");
+			freeImage(prevImage);
 			break;
 		}
 		i++;
 	}
 
+	freeImage(prevImage);
 	debug("playVideo: end time %f[s], duration %f", getTime(), getTime() - t);
 }
 
@@ -646,7 +648,7 @@ VideoInfo getVideoInfo(const char TARGET[])
 	avformat_open_input(&formatCtx, TARGET, NULL, NULL);
 	avformat_find_stream_info(formatCtx,  NULL);
 
-	int index;
+	int index = 0;
 
 	for (int i = 0; i < formatCtx->nb_streams; i++)
 	{
