@@ -85,6 +85,10 @@ char vFormats[][25];
 #define DEFAULT_FPS 15
 #define TMP_FOLDER "/tmp/tmv"
 
+// number of samples to take when scaling (bigger -> better but slow)
+// 1 = nearest neighbor
+#define SCALE 5
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Types
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -472,9 +476,9 @@ Image scaleImage(Image oldImage, float xZoom, float yZoom)
 			int count = 0;
 
 			// take the average of all points
-			for(float k = 0; k < yPixelWidth; k += 0.1)
+			for(float k = 0; k < yPixelWidth; k += yPixelWidth / SCALE)
 			{
-				for(float l = 0; l < xPixelWidth; l += 0.1)
+				for(float l = 0; l < xPixelWidth; l += xPixelWidth / SCALE)
 				{
 					#define samplePoint oldImage.pixels\
 					[(int)(floor(i * yPixelWidth + k) * oldImage.width)\
