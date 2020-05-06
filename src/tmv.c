@@ -166,8 +166,16 @@ const char *argp_program_version = "tmv 0.1";
 const char *argp_program_bug_address = "<kal390983@gmail.com>";
 
 char doc[] =
-	"This is a program for viewing images and videos in almost any terminal.\n"
-	"256 color and utf-8 support is necessary.";
+	"View images and videos without leaving the console.\n"
+	"Features:\n"
+	"    * View images form the terminal\n"
+	"    * Watch videos from the terminal (with sound)\n"
+	"    * Play videos at any fps"
+	"    * Resize images / videos (aspect ratio can be changesd or preserved)\n"
+	"    * Easy to use\n"
+	"Requirements:\n"
+	"A terminal that supports truecolor and utf-8.\n"
+	;
 
 char args_doc[] = "INPUT";
 

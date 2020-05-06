@@ -22,7 +22,7 @@ jobs:
 
     - name: Commit files
       run:
-        find . \! -name 'tmv' \! -name '.git' -delete
+        find . \! -name 'tmv' \! -name '.git' -delete;
         git config --local user.email "githubActions";
         git config --local user.name "Auto Build Action";
         git add .;
