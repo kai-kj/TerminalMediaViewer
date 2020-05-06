@@ -10,8 +10,8 @@ FLAGS = -lm -lavcodec -lavformat -lavfilter -lavdevice -lswresample -lswscale -l
 release: clean
 	@$(CC) $(LIBS) src/$(TARGET).c $(FLAGS) -o $(TARGET)
 
-debug: clean
-	@$(CC) $(LIBS) src/$(TARGET).c $(FLAGS) -D DEBUG -o $(TARGET)
+	debug: clean
+		@$(CC) $(LIBS) src/$(TARGET).c $(FLAGS) -D DEBUG -o $(TARGET)
 
 clean:
 	@$(RM) $(TARGET)
