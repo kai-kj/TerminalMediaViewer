@@ -65,11 +65,9 @@ SOFTWARE.
 #include "include/stb_image.h"
 
 // audio <https://github.com/dr-soft/miniaudio>
-#define DR_WAV_IMPLEMENTATION
-#include "include/dr_wav.h"
-
-#define MINIAUDIO_IMPLEMENTATION
-#include "include/miniaudio.h"
+#define CUTE_SOUND_FORCE_SDL
+#define CUTE_SOUND_IMPLEMENTATION
+#include <include/cute_sound.h>
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Image / Video format lists
@@ -114,12 +112,6 @@ typedef struct Image
 	int height;
 	Pixel *pixels;
 }Image;
-
-typedef struct Audio
-{
-	ma_decoder decoder;
-	ma_device device;
-}Audio;
 
 void freeImage(Image image)
 {
@@ -370,65 +362,9 @@ void updateScreen(Image image, Image prevImage)
 // Audio
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-void data_callback(
-	ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount
-)
+void playAudio(const char TARGET[])
 {
-    ma_decoder* pDecoder = (ma_decoder*)pDevice->pUserData;
-    if(pDecoder == NULL) return;
-
-    ma_decoder_read_pcm_frames(pDecoder, pOutput, frameCount);
-
-    (void)pInput;
-}
-
-void playAudio(const char PATH[])
-{
-	ma_result result;
-    ma_decoder decoder;
-    ma_device_config deviceConfig;
-    ma_device device;
-
-    result = ma_decoder_init_file(PATH, NULL, &decoder);
-
-	if(result != MA_SUCCESS) error(__func__, "could not initialize audio file");
-
-	deviceConfig = ma_device_config_init(ma_device_type_playback);
-    deviceConfig.playback.format   = decoder.outputFormat;
-    deviceConfig.playback.channels = decoder.outputChannels;
-    deviceConfig.sampleRate = decoder.outputSampleRate;
-    deviceConfig.dataCallback = data_callback;
-    deviceConfig.pUserData = &decoder;
-
-    result = ma_device_init(NULL, &deviceConfig, &device);
-	if(result != MA_SUCCESS)
-		error(__func__, "could not initialize audio device");
-    result = ma_device_start(&device);
-	if(result != MA_SUCCESS)
-		error(__func__, "could not start audio device");
-}
-
-void stopAudio()
-{
-	ma_context context;
-    if (ma_context_init(NULL, 0, NULL, &context) != MA_SUCCESS) {
-        // Error.
-    }
-
-    ma_device_info* pPlaybackDeviceInfos;
-    ma_uint32 playbackDeviceCount;
-    ma_device_info* pCaptureDeviceInfos;
-    ma_uint32 captureDeviceCount;
-    if (ma_context_get_devices(&context, &pPlaybackDeviceInfos, &playbackDeviceCount, &pCaptureDeviceInfos, &captureDeviceCount) != MA_SUCCESS) {
-        // Error.
-    }
-
-    // Loop over each device info and do something with it. Here we just print the name with their index. You may want to give the user the
-    // opportunity to choose which device they'd prefer.
-    for (ma_uint32 iDevice = 0; iDevice < playbackDeviceCount; iDevice += 1) {
-        printf("%d - %s\n", iDevice, pPlaybackDeviceInfos[iDevice].name);
-    }
-	getchar();
+	
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -836,8 +772,6 @@ int main(int argc, char *argv[])
 	args.sound = 1;
 
 	argp_parse(&argp, argc, argv, 0, 0, &args);
-
-	stopAudio();
 
 	debug(__func__, "target file: %s", args.input);
 
