@@ -178,7 +178,7 @@ void error(const char *FUNC, const char *FMT, ...)
 // Argp
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-const char *argp_program_version = "tmv 0.1";
+const char *argp_program_version = "tmv v0.1";
 
 const char *argp_program_bug_address = "<kal390983@gmail.com>";
 
