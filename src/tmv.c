@@ -64,11 +64,6 @@ SOFTWARE.
 #define STB_IMAGE_IMPLEMENTATION
 #include "include/stb_image.h"
 
-// audio <https://github.com/dr-soft/miniaudio>
-#define CUTE_SOUND_FORCE_SDL
-#define CUTE_SOUND_IMPLEMENTATION
-#include <include/cute_sound.h>
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Image / Video format lists
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -364,7 +359,7 @@ void updateScreen(Image image, Image prevImage)
 
 void playAudio(const char TARGET[])
 {
-	
+
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
