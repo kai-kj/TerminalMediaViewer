@@ -1,0 +1,24 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Create local changes
+      run: make
+      
+    - name: Commit files
+      run:
+        git config --local user.email "githubActions"
+        git config --local user.name "Auto Build Action"
+        git commit -m "Build"
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: release
+        force: true
