@@ -23,6 +23,7 @@ jobs:
     - name: Commit files
       run:
         rm .gitignore;
+        echo '*' >> .gitignore; echo '!tmv' >> .gitignore;
         git config --local user.email "githubActions";
         git config --local user.name "Auto Build Action";
         git add .;
