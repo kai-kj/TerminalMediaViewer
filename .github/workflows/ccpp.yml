@@ -22,10 +22,7 @@ jobs:
 
     - name: Commit files
       run:
-        rm .gitignore;
-        shopt -s extglob;
-        rm -rf -v !(".git"|"tmv") ;
-        shopt -u extglob;
+        find . \! -name 'tmv' \! -name '.git' -delete
         git config --local user.email "githubActions";
         git config --local user.name "Auto Build Action";
         git add .;
