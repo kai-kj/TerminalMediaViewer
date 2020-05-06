@@ -22,7 +22,10 @@ jobs:
 
     - name: Commit files
       run:
+        rm tmv;
         rm .gitignore;
+        rm -r .github;
+        rm -r tests;
         git config --local user.email "githubActions";
         git config --local user.name "Auto Build Action";
         git add .;
