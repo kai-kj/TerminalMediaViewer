@@ -11,7 +11,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: install libs
       run:
-        sudo apt install -y libav-tools  
+        sudo apt install -y ffmpeg
     - name: Build
       run: make
       
