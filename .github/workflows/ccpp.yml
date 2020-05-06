@@ -8,7 +8,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Create local changes
+    - uses: kal39/TerminalMediaViewer@master
+    - name: Build
       run: make
       
     - name: Commit files
