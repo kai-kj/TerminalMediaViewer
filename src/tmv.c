@@ -126,33 +126,58 @@ void freeImage(Image image)
 	free(image.pixels);
 }
 
+Image copyImage(Image image)
+{
+	Image newImage;
+	newImage.width = image.width;
+	newImage.height = image.height;
+
+	newImage.pixels = malloc((image.width * image.height) * sizeof(Pixel));
+
+	for(int i = 0; i < image.height; i++)
+	{
+		for(int j = 0; j < image.width; j++)
+		{
+			int index = i * image.width + j;
+			newImage.pixels[index].r = image.pixels[index].r;
+			newImage.pixels[index].g = image.pixels[index].g;
+			newImage.pixels[index].b = image.pixels[index].b;
+		}
+	}
+	return(newImage);
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Debug
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-int debug(const char *fmt, ...)
+int debug(const char *FUNC, const char *FMT, ...)
 {
 	#ifdef DEBUG
-	char msg[4096];
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(msg, sizeof(msg), fmt, args);
-	printf("DEBUG: %s\n", msg);
-	getchar();
-    va_end(args);
-    return 0;
+		char msg[4096];
+	    va_list args;
+	    va_start(args, FMT);
+	    vsnprintf(msg, sizeof(msg), FMT, args);
+		printf(
+			"\e[33mDEBUG\e[39m(\e[32m%s\e[39m) %s\n"
+			"\e[90m[press ENTER to continue...]\e[39m",
+			FUNC, msg
+		);
+		getchar();
+	    va_end(args);
+	    return 0;
 	#else
-	return 1;
+		return 1;
 	#endif
 }
 
-void error(const char *fmt, ...)
+void error(const char *FUNC, const char *FMT, ...)
 {
 	char msg[4096];
     va_list args;
-    va_start(args, fmt);
-    vsnprintf(msg, sizeof(msg), fmt, args);
-	printf("ERROR: %s\n", msg);
+    va_start(args, FMT);
+    vsnprintf(msg, sizeof(msg), FMT, args);
+	printf("\e[31mERROR\e[39m(\e[32m%s\e[39m): %s\n", FUNC, msg);
     va_end(args);
 	exit(1);
 }
@@ -173,28 +198,26 @@ char doc[] =
 char args_doc[] = "INPUT";
 
 static struct argp_option options[] = {
-    {"width", 'w', 0, 0, "Set width. Setting both width and height \
-will ignore original aspect ratio.", 1},
-	{"height", 'h', 0, 0, "Set height. Setting both width and height \
-will ignore original aspect ratio.", 1},
+    {"width", 'w', 0, 0, "Set output width.", 1},
+	{"height", 'h', 0, 0, "Set output height.", 1},
 	{"fps", 'f', 0, 0, "Set fps. Default 15 fps", 2},
 	{"origfps", 'F', 0, 0, "Use original fps from video. Default 15 fps", 2},
-	{"sound", 's', 0, 0, "true: play sound (default); false: don't play sound", 3},
+	{"no-sound", 's', 0, 0, "disable sound", 3},
 	{ 0 }
 };
 
 struct args {
 	char *input;
-	int fps;
-	int fpsFlag;
 	int width;
 	int height;
+	int fps;
+	int fpsFlag;
+	int sound;
 };
 
 static error_t parse_option(int key, char *arg, struct argp_state *state)
 {
 	struct args *args = state->input;
-
 	switch(key)
 	{
 		case ARGP_KEY_ARG:
@@ -216,14 +239,17 @@ static error_t parse_option(int key, char *arg, struct argp_state *state)
 		case 'h':
 			args->height = atoi(arg);
 			break;
+		case 's':
+			args->sound = 0;
+			break;
 		case ARGP_KEY_END:
-			if (args->input == NULL)
+			if(args->input == NULL)
 				argp_usage( state );
-
 			break;
 		default:
 			return ARGP_ERR_UNKNOWN;
 	}
+
 	return 0;
 }
 
@@ -240,39 +266,24 @@ struct argp argp = {
 
 float min(float a, float b)
 {
-	if(a < b)
-		return(a);
-	else
-		return(b);
+	if(a < b) return(a);
+	else return(b);
 }
-
-
 
 float getTime()
 {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-
 	long int time = (long int)((tv.tv_sec) * 1000 + (tv.tv_usec) / 1000);
-	float timeF = (float)(time % 10000000) / 1000;
-
-	return(timeF);
-}
-
-int comparePixels(const Pixel pixel1, const Pixel pixel2)
-{
-	if(pixel1.r != pixel2.r || pixel1.g != pixel2.g || pixel1.b != pixel2.b)
-		return(1);
-
-	return(0);
+	return((float)(time % 10000000) / 1000);
 }
 
 // get file extension
-
-char *getExtension(const char *TARGET) {
+char *getExtension(const char *TARGET)
+{
     char *dot = strrchr(TARGET, '.');
     if(!dot || dot == TARGET) return "";
-    return dot + 1;
+    else return dot + 1;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -299,14 +310,12 @@ int getWinHeight()
 
 void displayImage(Image image)
 {
-	int height = image.height;
-	int width = image.width;
-	for(int i = 0; i < height - 1; i += 2) // update 2 pixels at once
+	for(int i = 0; i < image.height - 1; i += 2) // update 2 pixels at once
 	{
-		for(int j = 0; j < width - 1; j++)
+		for(int j = 0; j < image.width - 1; j++)
 		{
-			#define pixel1 image.pixels[i * width + j]
-			#define pixel2 image.pixels[(i + 1) * width + j]
+			#define pixel1 image.pixels[i * image.width + j]
+			#define pixel2 image.pixels[(i + 1) * image.width + j]
 
 			// set foreground and background colors
 			printf("\x1b[48;2;%d;%d;%dm", pixel1.r, pixel1.g, pixel1.b);
@@ -323,31 +332,25 @@ void displayImage(Image image)
 }
 
 // only updates changed pixels (-> faster than displayImage())
-
 void updateScreen(Image image, Image prevImage)
 {
-	int height = image.height;
-	int width = image.width;
-
-	for(int i = 0; i < height - 1; i += 2) // update 2 pixels at once
+	for(int i = 0; i < image.height - 1; i += 2) // update 2 pixels at once
 	{
-		for(int j = 0; j < width - 1; j++)
+		for(int j = 0; j < image.width - 1; j++)
 		{
-			#define cPixel1 image.pixels[i * width + j]
-			#define cPixel2 image.pixels[(i + 1) * width + j]
-			#define pPixel1 prevImage.pixels[i * width + j]
-			#define pPixel2 prevImage.pixels[(i + 1) * width + j]
+			#define cPixel1 image.pixels[i * image.width + j]
+			#define cPixel2 image.pixels[(i + 1) * image.width + j]
+			#define pPixel1 prevImage.pixels[i * prevImage.width + j]
+			#define pPixel2 prevImage.pixels[(i + 1) * prevImage.width + j]
 
 			// draw only if pixel has changed
 			if(
-				comparePixels(
-					image.pixels[i * width + j],
-					prevImage.pixels[i * width + j]
-				)
-				|| comparePixels(
-					image.pixels[(i + 1) * width + j],
-					prevImage.pixels[(i + 1) * width + j]
-				)
+				cPixel1.r != pPixel1.r ||
+				cPixel1.g != pPixel1.g ||
+				cPixel1.b != pPixel1.b ||
+				cPixel2.r != pPixel2.r ||
+				cPixel2.g != pPixel2.g ||
+				cPixel2.b != pPixel2.b
 			)
 			{
 				// move cursor
@@ -367,12 +370,12 @@ void updateScreen(Image image, Image prevImage)
 // Audio
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
+void data_callback(
+	ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount
+)
 {
     ma_decoder* pDecoder = (ma_decoder*)pDevice->pUserData;
-    if (pDecoder == NULL) {
-        return;
-    }
+    if(pDecoder == NULL) return;
 
     ma_decoder_read_pcm_frames(pDecoder, pOutput, frameCount);
 
@@ -381,26 +384,51 @@ void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uin
 
 void playAudio(const char PATH[])
 {
-    ma_result result;
+	ma_result result;
     ma_decoder decoder;
     ma_device_config deviceConfig;
     ma_device device;
 
     result = ma_decoder_init_file(PATH, NULL, &decoder);
 
-	if(result != MA_SUCCESS)
-		return;
+	if(result != MA_SUCCESS) error(__func__, "could not initialize audio file");
 
-    deviceConfig = ma_device_config_init(ma_device_type_playback);
+	deviceConfig = ma_device_config_init(ma_device_type_playback);
     deviceConfig.playback.format   = decoder.outputFormat;
     deviceConfig.playback.channels = decoder.outputChannels;
-    deviceConfig.sampleRate        = decoder.outputSampleRate;
-    deviceConfig.dataCallback      = data_callback;
-    deviceConfig.pUserData         = &decoder;
+    deviceConfig.sampleRate = decoder.outputSampleRate;
+    deviceConfig.dataCallback = data_callback;
+    deviceConfig.pUserData = &decoder;
 
-    ma_device_init(NULL, &deviceConfig, &device);
+    result = ma_device_init(NULL, &deviceConfig, &device);
+	if(result != MA_SUCCESS)
+		error(__func__, "could not initialize audio device");
+    result = ma_device_start(&device);
+	if(result != MA_SUCCESS)
+		error(__func__, "could not start audio device");
+}
 
-    ma_device_start(&device);
+void stopAudio()
+{
+	ma_context context;
+    if (ma_context_init(NULL, 0, NULL, &context) != MA_SUCCESS) {
+        // Error.
+    }
+
+    ma_device_info* pPlaybackDeviceInfos;
+    ma_uint32 playbackDeviceCount;
+    ma_device_info* pCaptureDeviceInfos;
+    ma_uint32 captureDeviceCount;
+    if (ma_context_get_devices(&context, &pPlaybackDeviceInfos, &playbackDeviceCount, &pCaptureDeviceInfos, &captureDeviceCount) != MA_SUCCESS) {
+        // Error.
+    }
+
+    // Loop over each device info and do something with it. Here we just print the name with their index. You may want to give the user the
+    // opportunity to choose which device they'd prefer.
+    for (ma_uint32 iDevice = 0; iDevice < playbackDeviceCount; iDevice += 1) {
+        printf("%d - %s\n", iDevice, pPlaybackDeviceInfos[iDevice].name);
+    }
+	getchar();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -423,34 +451,37 @@ int getImageHeight(const char TARGET[])
 
 Image loadImage(const char TARGET[])
 {
-	int width, height, components;
+	Image image;
 
-	unsigned char *imageRaw = stbi_load(TARGET, &width, &height, &components, 3);
+	unsigned char *imageRaw = stbi_load(
+		TARGET, &image.width, &image.height, NULL, 3
+	);
 
 	if(imageRaw == NULL)
-		error("invalid image %s", TARGET);
+		error(__func__, "could not open %s (it may be corrupt)", TARGET);
 
-	Image image;
-	image.height = height;
-	image.width = width;
-	image.pixels = (Pixel*)malloc((width * height) * sizeof(Pixel));
+	image.pixels = (Pixel*)malloc((image.width * image.height) * sizeof(Pixel));
 
 	if(image.pixels == NULL)
-		error("failed to allocate memory for image");
+		error(__func__, "failed to allocate memory for image");
+
+	//debug(__func__, "allocated mempry for image");
 
 	// Convert to "Image" type (easier to use)
-	for(int i = 0; i < height; i++)
+	for(int i = 0; i < image.height; i++)
 	{
-		for(int j = 0; j < width; j++)
+		for(int j = 0; j < image.width; j++)
 		{
-			image.pixels[i * width + j].r = imageRaw[i * width * 3 + j * 3];
-			image.pixels[i * width + j].g = imageRaw[i * width * 3 + j * 3 + 1];
-			image.pixels[i * width + j].b = imageRaw[i * width * 3 + j * 3 + 2];
+			image.pixels[i * image.width + j].r
+				= imageRaw[i * image.width * 3 + j * 3];
+			image.pixels[i * image.width + j].g
+				= imageRaw[i * image.width * 3 + j * 3 + 1];
+			image.pixels[i * image.width + j].b
+				= imageRaw[i * image.width * 3 + j * 3 + 2];
 		}
 	}
 
 	free(imageRaw);
-
 	return(image);
 }
 
@@ -464,6 +495,11 @@ Image scaleImage(Image oldImage, float xZoom, float yZoom)
 
 	newImage.pixels
 		= (Pixel*)malloc((newImage.width * newImage.height) * sizeof(Pixel));
+
+	if(newImage.pixels == NULL)
+		error(__func__, "failed to allocate memory for newImage");
+
+	debug(__func__, "allocated memory for newImage");
 
 	for(int i = 0; i < newImage.height; i++)
 	{
@@ -494,21 +530,6 @@ Image scaleImage(Image oldImage, float xZoom, float yZoom)
 			pixel.r = (int)((float)pixel.r / (float)count);
 			pixel.g = (int)((float)pixel.g / (float)count);
 			pixel.b = (int)((float)pixel.b / (float)count);
-
-			// check color
-			if
-			(
-				pixel.r > 255 || pixel.g > 255 || pixel.b > 255
-				|| pixel.r < 0 || pixel.g < 0 || pixel.b < 0
-			)
-			{
-				printf
-				(
-					"ERROR: invalid color value (%d, %d, %d) @(%d, %d)\n",
-					pixel.r, pixel.g, pixel.b, j, i
-				);
-				exit(1);
-			}
 		}
 	}
 	return(newImage);
@@ -516,47 +537,36 @@ Image scaleImage(Image oldImage, float xZoom, float yZoom)
 
 void image(const int WIDTH, const int HEIGHT, const char INPUT[])
 {
-	debug("image: image");
+	debug(__func__, "target image: %s", INPUT);
 
 	Image image = loadImage(INPUT);
 
-	int width, height;
-
-	if(WIDTH != -1)
-		width = WIDTH;
-	else
-		width = getWinWidth();
-
-	if(HEIGHT != -1)
-		height = HEIGHT;
-	else
-		height = getWinHeight();
-
-	debug("image: image dimensions (%d * %d)", width, height);
+	debug(
+		__func__, "original image dimensions: %d * %d",
+		image.width, image.height
+	);
 
 	float xZoom, yZoom;
 	if(WIDTH == -1 || HEIGHT == -1)
 	{
 		xZoom = min(
-			(float)width / (float)image.width,
-			(float)height / (float)image.height
+			(float)getWinWidth() / (float)image.width,
+			(float)getWinHeight() / (float)image.height
 		);
 		yZoom = min(
-			(float)width / (float)image.width,
-			(float)height / (float)image.height
+			(float)getWinWidth() / (float)image.width,
+			(float)getWinHeight() / (float)image.height
 		);
 	}
 	else
 	{
-		xZoom = (float)width / (float)image.width;
-		yZoom = (float)height / (float)image.height;
+		xZoom = (float)WIDTH / (float)image.width;
+		yZoom = (float)HEIGHT / (float)image.height;
 	}
 
-	debug("image: got zoom %f %f", xZoom, yZoom);
+	debug(__func__, "zoom: x: %f, y: %f", xZoom, yZoom);
 
-	image = scaleImage(image, xZoom, yZoom);
-
-	displayImage(image);
+	displayImage(scaleImage(image, xZoom, yZoom));
 
 	freeImage(image);
 }
@@ -565,19 +575,20 @@ void image(const int WIDTH, const int HEIGHT, const char INPUT[])
 // Video
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-void playVideo(const VideoInfo INFO)
+void playVideo(const VideoInfo INFO, const int SOUND)
 {
-	char dir[] = TMP_FOLDER;
-
-	debug("playVideo: image dir %s", dir);
+	debug(__func__, "tmp folder: %s", TMP_FOLDER);
 
 	Image prevImage;
+	prevImage.width = INFO.width;
+	prevImage.height = INFO.height;
+
 	prevImage.pixels = (Pixel*)malloc((INFO.width * INFO.height) * sizeof(Pixel));
 
 	if(prevImage.pixels == NULL)
-		error("failed to allocate memory for prevImage");
+		error(__func__, "failed to allocate memory for prevImage");
 
-	debug("playVideo: allocated memory for prevImage");
+	debug(__func__, "allocated memory for prevImage");
 
 	// initialize all colors to -1 to force update when calling updateScreen()
 	// for the first time
@@ -585,55 +596,54 @@ void playVideo(const VideoInfo INFO)
 	{
 		for(int j = 0; j < INFO.width; j++)
 		{
-			Pixel c;
-			c.r = -1;
-			c.g = -1;
-			c.b = -1;
-			prevImage.pixels[i * INFO.width + j] = c;
+			prevImage.pixels[i * INFO.width + j].r = -1;
+			prevImage.pixels[i * INFO.width + j].g = -1;
+			prevImage.pixels[i * INFO.width + j].b = -1;
 		}
 	}
 
-	float time = getTime();
-	float t = time;
-
-	debug("playVideo: start time %f[s], frames %d", time, INFO.frameCount);
-
 	char audioDir[1000];
-	sprintf(audioDir, "%s/audio.wav", dir);
-	playAudio(audioDir);
+	sprintf(audioDir, "%s/audio.wav", TMP_FOLDER);
 
-	int i = 0;
+	debug(
+		__func__, "starting audio (%s) and video (%d fps)", audioDir, INFO.fps
+	);
+
+	//if(SOUND == 1) playAudio(audioDir);
+
+	float sTime = getTime();
+	int currentFrame = 1;
+	int prevFrame = 0;
 
 	while(1)
 	{
-		char TARGET[1000];
-		sprintf(TARGET, "%s/frame%d.bmp", dir, i + 1);
-		if(access(TARGET, F_OK) != -1 )
+		char file[1000];
+		currentFrame = (int)floor(INFO.fps * (getTime() - sTime));
+		// frames start from 1
+		if(currentFrame < 1)currentFrame = 1;
+		sprintf(file, "%s/frame%d.bmp", TMP_FOLDER, currentFrame);
+
+		if(currentFrame != prevFrame) // don't draw same frame twice
 		{
-			Image currentImage = loadImage(TARGET);
-
-			// delete used images
-			remove(TARGET);
-
-			while(getTime() - time < 1 / (float)INFO.fps){}
-
-			time = getTime();
-			updateScreen(currentImage, prevImage);
-			prevImage = currentImage;
-
-			freeImage(currentImage);
+			if(access(file, F_OK) != - 1)
+			{
+				Image currentImage = loadImage(file);
+				updateScreen(currentImage, prevImage);
+				prevImage = copyImage(currentImage);
+				freeImage(currentImage);
+				// delete old frames
+				remove(file);
+			}
+			else
+			{
+				debug(__func__, "next file (%s) not found", file);
+				freeImage(prevImage);
+				break;
+			}
 		}
-		else
-		{
-			debug("playVideo: next file not found");
-			freeImage(prevImage);
-			break;
-		}
-		i++;
+		prevFrame = currentFrame;
 	}
-
 	freeImage(prevImage);
-	debug("playVideo: end time %f[s], duration %f", getTime(), getTime() - t);
 }
 
 VideoInfo getVideoInfo(const char TARGET[])
@@ -643,9 +653,9 @@ VideoInfo getVideoInfo(const char TARGET[])
 	AVFormatContext *formatCtx = avformat_alloc_context();
 
 	if(formatCtx == NULL)
-		error("failed to allocate memory for formatCtx");
+		error(__func__, "failed to allocate memory for formatCtx");
 
-	debug("getVideoInfo: allocated memory for formatCtx");
+	debug(__func__, "allocated memory for formatCtx");
 
 	avformat_open_input(&formatCtx, TARGET, NULL, NULL);
 	avformat_find_stream_info(formatCtx,  NULL);
@@ -667,7 +677,8 @@ VideoInfo getVideoInfo(const char TARGET[])
 	info.frameCount = formatCtx->streams[index]->duration;
 
 	debug(
-		"getVideoInfo: got video info {(%d * %d), fps = %d, frameCount = %d}",
+		__func__,
+		"got video info: %d * %d, fps = %d, frameCount = %d",
 		info.width, info.height, info.fps, info.frameCount
 	);
 
@@ -678,46 +689,30 @@ VideoInfo getVideoInfo(const char TARGET[])
 
 void video(
 	const int WIDTH, const int HEIGHT,
-	const int FPS, const int FLAG, const char INPUT[]
+	const int FPS, const int FLAG, const char INPUT[], const int SOUND
 )
 {
-	debug("MAIN: video");
-
 	VideoInfo info = getVideoInfo(INPUT);
-
-	int width, height;
-
-	if(WIDTH != -1)
-		width = WIDTH;
-	else
-		width = getWinWidth();
-
-	if(HEIGHT != -1)
-		height = HEIGHT;
-	else
-		height = getWinHeight();
-
-	debug("image: image dimensions (%d * %d)", width, height);
 
 	float xZoom, yZoom;
 	if(WIDTH == -1 || HEIGHT == -1)
 	{
 		xZoom = min(
-			(float)width / (float)info.width,
-			(float)height / (float)info.height
+			(float)getWinWidth() / (float)info.width,
+			(float)getWinHeight() / (float)info.height
 		);
 		yZoom = min(
-			(float)width / (float)info.width,
-			(float)height / (float)info.height
+			(float)getWinWidth() / (float)info.width,
+			(float)getWinHeight() / (float)info.height
 		);
 	}
 	else
 	{
-		xZoom = (float)width / (float)info.width;
-		yZoom = (float)height / (float)info.height;
+		xZoom = (float)WIDTH / (float)info.width;
+		yZoom = (float)HEIGHT / (float)info.height;
 	}
 
-	debug("image: got zoom %f %f", xZoom, yZoom);
+	debug(__func__, "zoom: x: %f,  y: %f", xZoom, yZoom);
 
 	if(FLAG == 0)
 		info.fps = DEFAULT_FPS;
@@ -727,15 +722,16 @@ void video(
 
 	char dir[] = TMP_FOLDER;
 
-	debug("MAIN: image dir %s", dir);
+	debug(__func__, "tmp folder: %s", dir);
 
 	struct stat sb;
 
 	// make /tmp/tmv folder if none exists
 	if(stat(dir, &sb) != 0)
 	{
+		debug(__func__, "could not find tmp folder");
 		mkdir(dir, 0700);
-		debug("MAIN: no image dir, created");
+		debug(__func__, "created tmp folder: %s", dir);
 	}
 
 	// decode video with ffmpeg into audio
@@ -755,6 +751,8 @@ void video(
 		dir
 	);
 
+	debug(__func__, "forking");
+
 	// child = plays video, parent = decodes
 	int pid = fork();
 
@@ -766,7 +764,7 @@ void video(
 		// wait for first image (ffmpeg takes time to start)
 		while(access(TARGET, F_OK) == -1){}
 		// play the video
-		playVideo(info);
+		playVideo(info, SOUND);
 	}
 	else
 	{
@@ -785,17 +783,17 @@ void video(
 void cleanup()
 {
 	// move cursor to bottom right and reset colors
-	printf("\x1b[0m \033[%d;%dH \n", getWinWidth(), getWinHeight());
+	printf("\x1b[0m \033[%d;%dH\n", getWinWidth(), getWinHeight());
 
 	char dirName[] = TMP_FOLDER;
 
-	debug("cleanup: image dir [%s]", dirName);
+	debug(__func__, "tmp folder: %s", dirName);
 
 	DIR *dir = opendir(dirName);
 
 	if(dir == NULL)
 	{
-		debug("failed to open dir");
+		debug(__func__, "failed to open tmp folder");
 		exit(0);
 	}
 
@@ -813,7 +811,7 @@ void cleanup()
     }
     closedir(dir);
 
-	debug("cleanup: deleted images(%d)", count);
+	debug(__func__, "deleted %d images", count);
 
 	exit(0);
 }
@@ -835,17 +833,23 @@ int main(int argc, char *argv[])
 	args.fpsFlag = 0;
 	args.width = -1;
 	args.height = -1;
+	args.sound = 1;
 
 	argp_parse(&argp, argc, argv, 0, 0, &args);
 
-	debug("MAIN: target %s", args.input);
+	stopAudio();
+
+	debug(__func__, "target file: %s", args.input);
+
+	if(access(args.input, F_OK) == -1)
+		error(__func__, "%s does not exist", args.input);
 
 	// 1: image, 2: video
 	int fileType = 1;
 
 	char *ext = getExtension(args.input);
 
-	debug("MAIN: got extension %s", ext);
+	debug(__func__, "file extension: %s", ext);
 
 	int i = 0;
 
@@ -863,15 +867,30 @@ int main(int argc, char *argv[])
 		i++;
 	}
 
+	int width, height;
+
+	if(args.width != -1)
+		width = args.width;
+	else
+		width = getWinWidth();
+
+	if(args.height != -1)
+		height = args.height;
+	else
+		height = getWinHeight();
+
+	debug(__func__, "display dimentions: %d * %d", width, height);
+
 	if(fileType == 1)
 		image(args.width, args.height, args.input);
 
 	else
 	{
-		video(args.width, args.height, args.fps, args.fpsFlag, args.input);
+		video(
+			args.width, args.height, args.fps,
+			args.fpsFlag, args.input, args.sound
+		);
 	}
-
-	debug("MAIN: cleanup");
 
 	cleanup();
 

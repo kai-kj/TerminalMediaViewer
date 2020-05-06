@@ -13,8 +13,12 @@ release: clean
 debug: clean
 	@$(CC) $(LIBS) src/$(TARGET).c $(FLAGS) -D DEBUG -o $(TARGET)
 
+gdb: clean
+	@$(CC) -g $(LIBS) src/$(TARGET).c $(FLAGS) -o $(TARGET).x
+
 clean:
 	@$(RM) $(TARGET)
+	@$(RM) $(TARGET).x
 
 depend:
 	@$(CC) $(LIBS) $(TARGET).c $(FLAGS) -M
