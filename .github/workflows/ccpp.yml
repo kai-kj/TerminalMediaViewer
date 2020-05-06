@@ -9,6 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - name: install libs
+      run:
+        sudo apt install -y libav-tools  
     - name: Build
       run: make
       
