@@ -69,8 +69,11 @@ A terminal that supports **truecolor** ([list](https://gist.github.com/XVilka/83
 * `gcc`
 * `make`
 * `lavcodec`
-* `libav` (`libavformat`, `libavfilter`, `libavdevice`, `libavutil`)
-* `ffmpeg` (`libswresample`, `libswscale`)
+* `ffmpeg`
+* `libavcodec`
+* `libavformat`
+* `libavfilter`
+* `libavdevice`
 
 ```
 git clone https://github.com/kal39/TerminalMediaViewer.git
