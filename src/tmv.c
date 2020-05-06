@@ -166,26 +166,20 @@ const char *argp_program_version = "tmv 0.1";
 const char *argp_program_bug_address = "<kal390983@gmail.com>";
 
 char doc[] =
-	"View images and videos without leaving the console.\n"
-	"Features:\n"
-	"    * View images form the terminal\n"
-	"    * Watch videos from the terminal (with sound)\n"
-	"    * Play videos at any fps"
-	"    * Resize images / videos (aspect ratio can be changesd or preserved)\n"
-	"    * Easy to use\n"
-	"Requirements:\n"
-	"A terminal that supports truecolor and utf-8.\n"
-	;
+	"\nView images and videos without leaving the console.\n"
+	"Requires a terminal that supports truecolor and utf-8\n"
+	"For more info visit < https://github.com/kal39/TerminalMediaViewer >";
 
 char args_doc[] = "INPUT";
 
 static struct argp_option options[] = {
-    {"fps", 'f', "TARGET FPS", 0, "Set fps. Default 15 fps" },
-	{"origfps", 'F', 0, 0, "Use original fps from video. Default 15 fps" },
-    {"width", 'w', "WIDTH", 0, "Set width. Setting both width and height \
-will ignore original aspect ratio."},
-	{"height", 'h', "HEIGHT", 0, "Set height. Setting both width and height \
-will ignore original aspect ratio."},
+    {"width", 'w', 0, 0, "Set width. Setting both width and height \
+will ignore original aspect ratio.", 1},
+	{"height", 'h', 0, 0, "Set height. Setting both width and height \
+will ignore original aspect ratio.", 1},
+	{"fps", 'f', 0, 0, "Set fps. Default 15 fps", 2},
+	{"origfps", 'F', 0, 0, "Use original fps from video. Default 15 fps", 2},
+	{"sound", 's', 0, 0, "true: play sound (default); false: don't play sound", 3},
 	{ 0 }
 };
 
