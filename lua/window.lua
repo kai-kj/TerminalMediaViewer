@@ -1,8 +1,8 @@
 local dbug = require "dbug"
 
-local display = {}
+local window = {}
 
-function display.getWidth()
+function window.getWidth()
 	local tmpfile = "/tmp/tmvtmp"
 	os.execute("tput cols > "..tmpfile)
 	local file = io.open(tmpfile)
@@ -13,7 +13,7 @@ function display.getWidth()
 	return tonumber(width)
 end
 
-function display.getHeight()
+function window.getHeight()
 	local tmpfile = "/tmp/tmvtmp"
 	os.execute("tput lines > "..tmpfile)
 	local file = io.open(tmpfile)
@@ -24,4 +24,12 @@ function display.getHeight()
 	return tonumber(height)
 end
 
-return display
+function window.setColor(r1, g1, b1, r2, g2, b2)
+	print("\x1b[48;2;"..r1..";"..g1..";"..b1.."m")
+	print("\x1b[38;2;"..r2..";"..g2..";"..b2.."m")
+end
+
+function window.resetColor() print("\x1b[0m") end
+
+
+return window

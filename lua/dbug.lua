@@ -17,13 +17,13 @@ end
 
 function dbug.log(message)
 	print(
-		"\27[33mLOG  \27[39m(\27[32m"..debug.getinfo(2).name.."\27[39m) "..message
+		"\27[33mLOG \27[39m(\27[32m"..debug.getinfo(2).name.."\27[39m) "..message
 	)
 end
 
 function dbug.error(message)
 	print(
-		"\27[31mERROR\27[39m(\27[32m"..debug.getinfo(2).name.."\27[39m) "..message
+		"\27[31mERROR \27[39m(\27[32m"..debug.getinfo(2).name.."\27[39m) "..message
 	)
 	dbug.exit()
 end
