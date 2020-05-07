@@ -1,7 +1,11 @@
 local argparse = require "argparse"
-local signal = require("posix.signal")
+local signal = require "posix.signal"
+local vips = require "vips"
 
 local dbug = require "dbug"
+local format = require "format"
+local display = require "display"
+
 function parseArguments()
 	local parser = argparse(
 		"tmv v0.1",
@@ -42,6 +46,23 @@ function main()
 	if io.open(args.input, "r") == nil then
 		dbug.error(args.input.." does not exist")
 	end
+
+	extension = args.input:match("(%w+)$")
+
+	dbug.log("target file extension: "..extension)
+
+	local width, height
+
+	if args.width ~= -1 then width = args.width
+	else width = getWinWidth() end
+
+	if args.width ~= -1 then height = args.height
+	else height = getWinWidth() end
+
+	dbug.log("display dimentions: "..display.getWidth().."*"..display.getHeight())
+
+	if format.isVideo(extension) then
+	else image.image(width, height, args.input) end
 
 	dbug.exit()
 end
