@@ -11,7 +11,7 @@ release: clean
 	@$(CC) $(LIBS) src/$(TARGET).c $(FLAGS) -o $(TARGET)
 
 debug: clean
-	@$(CC) $(LIBS) src/$(TARGET).c $(FLAGS) -D DEBUG -o $(TARGET)
+	@$(CC) -Wall $(LIBS) src/$(TARGET).c $(FLAGS) -D DEBUG -o $(TARGET)
 
 gdb: clean
 	@$(CC) -g $(LIBS) src/$(TARGET).c $(FLAGS) -o $(TARGET).x
@@ -21,4 +21,4 @@ clean:
 	@$(RM) $(TARGET).x
 
 depend:
-	@$(CC) $(LIBS) $(TARGET).c $(FLAGS) -M
+	@$(CC) $(LIBS) src/$(TARGET).c $(FLAGS) -M

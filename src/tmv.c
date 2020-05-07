@@ -64,6 +64,13 @@ SOFTWARE.
 #define STB_IMAGE_IMPLEMENTATION
 #include "include/stb_image.h"
 
+// playing audio files <https://github.com/dr-soft/miniaudio>
+#define DR_WAV_IMPLEMENTATION
+#include "include/dr_wav.h"
+
+#define MINIAUDIO_IMPLEMENTATION
+#include "include/miniaudio.h"
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Image / Video format lists
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -108,9 +115,10 @@ typedef struct Image
 	Pixel *pixels;
 }Image;
 
-void freeImage(Image image)
+void freeImage(Image *image)
 {
-	free(image.pixels);
+	if(image->pixels != NULL) free(image->pixels);
+	image->pixels = NULL;
 }
 
 Image copyImage(Image image)
@@ -138,7 +146,7 @@ Image copyImage(Image image)
 // Debug
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-int debug(const char *FUNC, const char *FMT, ...)
+int debugFunc(const char *FUNC, const char *FMT, ...)
 {
 	#ifdef DEBUG
 		char msg[4096];
@@ -158,7 +166,9 @@ int debug(const char *FUNC, const char *FMT, ...)
 	#endif
 }
 
-void error(const char *FUNC, const char *FMT, ...)
+#define debug(a, ...) debugFunc(__func__, (a), ##__VA_ARGS__)
+
+void errorFunc(const char *FUNC, const char *FMT, ...)
 {
 	char msg[4096];
     va_list args;
@@ -168,6 +178,8 @@ void error(const char *FUNC, const char *FMT, ...)
     va_end(args);
 	exit(1);
 }
+
+#define error(a, ...) debugFunc(__func__, (a), ##__VA_ARGS__)
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Argp
@@ -357,9 +369,50 @@ void updateScreen(Image image, Image prevImage)
 // Audio
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-void playAudio(const char TARGET[])
+void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
+    ma_decoder* pDecoder = (ma_decoder*)pDevice->pUserData;
+    if (pDecoder == NULL) {
+        return;
+    }
 
+    ma_decoder_read_pcm_frames(pDecoder, pOutput, frameCount);
+
+    (void)pInput;
+}
+
+ma_decoder decoder;
+ma_device device;
+
+void playAudio(const char PATH[])
+{
+    ma_result result;
+    ma_device_config deviceConfig;
+
+    result = ma_decoder_init_file(PATH, NULL, &decoder);
+
+	if(result != MA_SUCCESS) error("could not initialize deoder");
+
+    deviceConfig = ma_device_config_init(ma_device_type_playback);
+    deviceConfig.playback.format   = decoder.outputFormat;
+    deviceConfig.playback.channels = decoder.outputChannels;
+    deviceConfig.sampleRate        = decoder.outputSampleRate;
+    deviceConfig.dataCallback      = data_callback;
+    deviceConfig.pUserData         = &decoder;
+
+    result = ma_device_init(NULL, &deviceConfig, &device);
+
+	if(result != MA_SUCCESS) error("could not initialize deoder");
+
+    result = ma_device_start(&device);
+
+	if(result != MA_SUCCESS) error("could not initialize deoder");
+}
+
+void stopAudio()
+{
+	ma_device_uninit(&device);
+    ma_decoder_uninit(&decoder);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -389,14 +442,14 @@ Image loadImage(const char TARGET[])
 	);
 
 	if(imageRaw == NULL)
-		error(__func__, "could not open %s (it may be corrupt)", TARGET);
+		error("could not open %s (it may be corrupt)", TARGET);
 
 	image.pixels = (Pixel*)malloc((image.width * image.height) * sizeof(Pixel));
 
 	if(image.pixels == NULL)
-		error(__func__, "failed to allocate memory for image");
+		error("failed to allocate memory for image");
 
-	//debug(__func__, "allocated mempry for image");
+	//debug("allocated mempry for image");
 
 	// Convert to "Image" type (easier to use)
 	for(int i = 0; i < image.height; i++)
@@ -428,9 +481,9 @@ Image scaleImage(Image oldImage, float xZoom, float yZoom)
 		= (Pixel*)malloc((newImage.width * newImage.height) * sizeof(Pixel));
 
 	if(newImage.pixels == NULL)
-		error(__func__, "failed to allocate memory for newImage");
+		error("failed to allocate memory for newImage");
 
-	debug(__func__, "allocated memory for newImage");
+	debug("allocated memory for newImage");
 
 	for(int i = 0; i < newImage.height; i++)
 	{
@@ -468,12 +521,12 @@ Image scaleImage(Image oldImage, float xZoom, float yZoom)
 
 void image(const int WIDTH, const int HEIGHT, const char INPUT[])
 {
-	debug(__func__, "target image: %s", INPUT);
+	debug("target image: %s", INPUT);
 
 	Image image = loadImage(INPUT);
 
 	debug(
-		__func__, "original image dimensions: %d * %d",
+		"original image dimensions: %d * %d",
 		image.width, image.height
 	);
 
@@ -495,11 +548,11 @@ void image(const int WIDTH, const int HEIGHT, const char INPUT[])
 		yZoom = (float)HEIGHT / (float)image.height;
 	}
 
-	debug(__func__, "zoom: x: %f, y: %f", xZoom, yZoom);
+	debug("zoom: x: %f, y: %f", xZoom, yZoom);
 
 	displayImage(scaleImage(image, xZoom, yZoom));
 
-	freeImage(image);
+	freeImage(&image);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -508,7 +561,7 @@ void image(const int WIDTH, const int HEIGHT, const char INPUT[])
 
 void playVideo(const VideoInfo INFO, const int SOUND)
 {
-	debug(__func__, "tmp folder: %s", TMP_FOLDER);
+	debug("tmp folder: %s", TMP_FOLDER);
 
 	Image prevImage;
 	prevImage.width = INFO.width;
@@ -517,9 +570,9 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 	prevImage.pixels = (Pixel*)malloc((INFO.width * INFO.height) * sizeof(Pixel));
 
 	if(prevImage.pixels == NULL)
-		error(__func__, "failed to allocate memory for prevImage");
+		error("failed to allocate memory for prevImage");
 
-	debug(__func__, "allocated memory for prevImage");
+	debug("allocated memory for prevImage");
 
 	// initialize all colors to -1 to force update when calling updateScreen()
 	// for the first time
@@ -537,10 +590,10 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 	sprintf(audioDir, "%s/audio.wav", TMP_FOLDER);
 
 	debug(
-		__func__, "starting audio (%s) and video (%d fps)", audioDir, INFO.fps
+		"starting audio (%s) and video (%d fps)", audioDir, INFO.fps
 	);
 
-	//if(SOUND == 1) playAudio(audioDir);
+	if(SOUND == 1) playAudio(audioDir);
 
 	float sTime = getTime();
 	int currentFrame = 1;
@@ -561,20 +614,20 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 				Image currentImage = loadImage(file);
 				updateScreen(currentImage, prevImage);
 				prevImage = copyImage(currentImage);
-				freeImage(currentImage);
+				freeImage(&currentImage);
 				// delete old frames
 				remove(file);
 			}
 			else
 			{
-				debug(__func__, "next file (%s) not found", file);
-				freeImage(prevImage);
+				debug("next file (%s) not found", file);
+				freeImage(&prevImage);
 				break;
 			}
 		}
 		prevFrame = currentFrame;
 	}
-	freeImage(prevImage);
+	freeImage(&prevImage);
 }
 
 VideoInfo getVideoInfo(const char TARGET[])
@@ -584,9 +637,9 @@ VideoInfo getVideoInfo(const char TARGET[])
 	AVFormatContext *formatCtx = avformat_alloc_context();
 
 	if(formatCtx == NULL)
-		error(__func__, "failed to allocate memory for formatCtx");
+		error("failed to allocate memory for formatCtx");
 
-	debug(__func__, "allocated memory for formatCtx");
+	debug("allocated memory for formatCtx");
 
 	avformat_open_input(&formatCtx, TARGET, NULL, NULL);
 	avformat_find_stream_info(formatCtx,  NULL);
@@ -643,7 +696,7 @@ void video(
 		yZoom = (float)HEIGHT / (float)info.height;
 	}
 
-	debug(__func__, "zoom: x: %f,  y: %f", xZoom, yZoom);
+	debug("zoom: x: %f,  y: %f", xZoom, yZoom);
 
 	if(FLAG == 0)
 		info.fps = DEFAULT_FPS;
@@ -653,16 +706,16 @@ void video(
 
 	char dir[] = TMP_FOLDER;
 
-	debug(__func__, "tmp folder: %s", dir);
+	debug("tmp folder: %s", dir);
 
 	struct stat sb;
 
 	// make /tmp/tmv folder if none exists
 	if(stat(dir, &sb) != 0)
 	{
-		debug(__func__, "could not find tmp folder");
+		debug("could not find tmp folder");
 		mkdir(dir, 0700);
-		debug(__func__, "created tmp folder: %s", dir);
+		debug("created tmp folder: %s", dir);
 	}
 
 	// decode video with ffmpeg into audio
@@ -682,7 +735,7 @@ void video(
 		dir
 	);
 
-	debug(__func__, "forking");
+	debug("forking");
 
 	// child = plays video, parent = decodes
 	int pid = fork();
@@ -718,13 +771,13 @@ void cleanup()
 
 	char dirName[] = TMP_FOLDER;
 
-	debug(__func__, "tmp folder: %s", dirName);
+	debug("tmp folder: %s", dirName);
 
 	DIR *dir = opendir(dirName);
 
 	if(dir == NULL)
 	{
-		debug(__func__, "failed to open tmp folder");
+		debug("failed to open tmp folder");
 		exit(0);
 	}
 
@@ -742,7 +795,9 @@ void cleanup()
     }
     closedir(dir);
 
-	debug(__func__, "deleted %d images", count);
+	debug("deleted %d images", count);
+
+	stopAudio();
 
 	exit(0);
 }
@@ -768,17 +823,17 @@ int main(int argc, char *argv[])
 
 	argp_parse(&argp, argc, argv, 0, 0, &args);
 
-	debug(__func__, "target file: %s", args.input);
+	debug("target file: %s", args.input);
 
 	if(access(args.input, F_OK) == -1)
-		error(__func__, "%s does not exist", args.input);
+		error("%s does not exist", args.input);
 
 	// 1: image, 2: video
 	int fileType = 1;
 
 	char *ext = getExtension(args.input);
 
-	debug(__func__, "file extension: %s", ext);
+	debug("file extension: %s", ext);
 
 	int i = 0;
 
@@ -808,7 +863,7 @@ int main(int argc, char *argv[])
 	else
 		height = getWinHeight();
 
-	debug(__func__, "display dimentions: %d * %d", width, height);
+	debug("display dimentions: %d * %d", width, height);
 
 	if(fileType == 1)
 		image(args.width, args.height, args.input);
