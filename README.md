@@ -28,11 +28,11 @@
 
 **Viewing an image**
 
-<img src="assets/iGif.gif" width="60%">
+<img src="assets/iGif.gif" width="80%">
 
 **Watching a video**
 
-<img src="assets/vGif.gif" width="60%">
+<img src="assets/vGif.gif" width="80%">
 
 ----
 
