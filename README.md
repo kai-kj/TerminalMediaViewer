@@ -17,7 +17,8 @@
 ### Features
 
 * View images form the terminal
-* Watch videos from the terminal (with sound ***-- WIP --***  )
+* Watch videos from the terminal
+* Play videos with sound
 * Play videos at any fps
 * Resize images / videos (aspect ratio can be changesd or preserved)
 * Easy to use
@@ -38,7 +39,7 @@ A terminal that supports **truecolor** ([list](https://gist.github.com/XVilka/83
 
 ### Usage
 
-**tmv [`OPTIONS...`] `INPUT`**
+**tmv [`OPTIONS...`] `[INPUT FILE]`**
 
 * **`INPUT`**  
 	File to display/play
@@ -52,7 +53,7 @@ A terminal that supports **truecolor** ([list](https://gist.github.com/XVilka/83
 		Set fps (default 15 fps)
 	* `-F`, `--origfps`  
 		Use original fps from video (default 15 fps)
-	* `-s`, `no-sound`  ***-- WIP --***  
+	* `-s`, `--no-sound`   
 		disable sound
 	* `-?`, `--help `  
 		Display help
@@ -68,14 +69,10 @@ A terminal that supports **truecolor** ([list](https://gist.github.com/XVilka/83
 ### Build from source
 
 **Requirements:**
-* `gcc`
-* `make`
-* `lavcodec`
 * `ffmpeg`
-* `libavcodec`
-* `libavformat`
-* `libavfilter`
-* `libavdevice`
+* `libavcodec-dev`
+* `libavformat-dev`
+* `libavfilter-dev`
 
 ```
 git clone https://github.com/kal39/TerminalMediaViewer.git
