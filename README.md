@@ -25,9 +25,15 @@
 
 ----
 
-### Screenshots
+### Examples
 
-***-- WIP --***
+**Viewing an image**
+
+![](assets/iVid.gif)
+
+**Watching a video**
+
+![](assets/vVid.gif)
 
 ----
 
