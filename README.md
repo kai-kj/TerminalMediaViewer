@@ -11,6 +11,7 @@
 	<img src="https://img.shields.io/github/workflow/status/kal39/TerminalMediaViewer/make/master">
 	</p>
 </p>
+
 ----
 
 ### Features
