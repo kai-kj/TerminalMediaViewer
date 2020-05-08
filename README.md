@@ -7,7 +7,7 @@
 	<img src="https://img.shields.io/github/languages/top/kal39/TerminalMediaViewer">
 	<br>
 	<img src="https://img.shields.io/github/issues/kal39/TerminalMediaViewer">
-	<img src="https://img.shields.io/github/v/release/kal39/TerminalMediaViewer">
+	<img src="https://img.shields.io/github/v/release/kal39/TerminalMediaViewer?sort=semver">
 	<img src="https://img.shields.io/github/workflow/status/kal39/TerminalMediaViewer/make/master">
 	</p>
 </p>
@@ -62,7 +62,7 @@ A terminal that supports **truecolor** ([list](https://gist.github.com/XVilka/83
 
 ### Binaries
 
-***-- WIP --***
+You can download binaries from the [**releases**](https://github.com/kal39/TerminalMediaViewer/releases) page.
 
 ----
 
