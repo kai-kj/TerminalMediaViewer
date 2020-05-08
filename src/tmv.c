@@ -75,7 +75,7 @@ SOFTWARE.
 // Image / Video format lists
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-#include "vFormatList.h"
+#include "formatList.h"
 char vFormats[][25];
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -179,7 +179,7 @@ void errorFunc(const char *FUNC, const char *FMT, ...)
 	exit(1);
 }
 
-#define error(a, ...) debugFunc(__func__, (a), ##__VA_ARGS__)
+#define error(a, ...) errorFunc(__func__, (a), ##__VA_ARGS__)
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Argp
@@ -192,14 +192,14 @@ const char *argp_program_bug_address = "<kal390983@gmail.com>";
 char doc[] =
 	"\nView images and videos without leaving the console.\n"
 	"Requires a terminal that supports truecolor and utf-8\n"
-	"For more info visit < https://github.com/kal39/TerminalMediaViewer >";
+	"For more info visit <https://github.com/kal39/TerminalMediaViewer>";
 
-char args_doc[] = "INPUT";
+char args_doc[] = "[INPUT FILE]";
 
 static struct argp_option options[] = {
-    {"width", 'w', 0, 0, "Set output width.", 1},
-	{"height", 'h', 0, 0, "Set output height.", 1},
-	{"fps", 'f', 0, 0, "Set fps. Default 15 fps", 2},
+    {"width", 'w', "[width]", 0, "Set output width.", 1},
+	{"height", 'h', "[height]", 0, "Set output height.", 1},
+	{"fps", 'f', "[target fps]", 0, "Set target fps. Default 15 fps", 2},
 	{"origfps", 'F', 0, 0, "Use original fps from video. Default 15 fps", 2},
 	{"no-sound", 's', 0, 0, "disable sound", 3},
 	{ 0 }
@@ -224,18 +224,20 @@ static error_t parse_option(int key, char *arg, struct argp_state *state)
 				args->input = arg;
 			else
 				argp_usage( state );
-
 			break;
 		case 'f':
+			if(atoi(arg) <= 0) error("invalid fps value");
 			args->fps = atoi(arg);
 			break;
 		case 'F':
 			args->fpsFlag = 1;
 			break;
 		case 'w':
+			if(atoi(arg) <= 0) error("invalid width value");
 			args->width = atoi(arg);
 			break;
 		case 'h':
+			if(atoi(arg) <= 0) error("invalid height value");
 			args->height = atoi(arg);
 			break;
 		case 's':
@@ -285,6 +287,36 @@ char *getExtension(const char *TARGET)
     else return dot + 1;
 }
 
+int checkFileType(const char EXT[])
+{
+	int fileType = -1;
+	for(int i = 0; ; i++)
+	{
+		if(strcasecmp(EXT, vFormats[i]) == 0)
+		{
+			fileType = 2;
+			break;
+		}
+		else if(strcmp("END", vFormats[i]) == 0)
+			break;
+
+	}
+
+	for(int i = 0; ; i++)
+	{
+		if(strcasecmp(EXT, iFormats[i]) == 0)
+		{
+			fileType = 1;
+			break;
+		}
+		else if(strcmp("END", iFormats[i]) == 0)
+			break;
+
+	}
+
+	return(fileType);
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Window
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -303,6 +335,13 @@ int getWinHeight()
 	return((size.ws_row) * 2);
 }
 
+// system("clear") doesn't let you scroll back
+void clear()
+{
+	for(int i = 0; i < getWinHeight(); i++)
+		printf("\n");
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Screen
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -316,6 +355,9 @@ void displayImage(Image image)
 			#define pixel1 image.pixels[i * image.width + j]
 			#define pixel2 image.pixels[(i + 1) * image.width + j]
 
+			// move cursor
+			printf("\033[%d;%dH", i / 2 + 1, j + 1);
+
 			// set foreground and background colors
 			printf("\x1b[48;2;%d;%d;%dm", pixel1.r, pixel1.g, pixel1.b);
 			printf("\x1b[38;2;%d;%d;%dm", pixel2.r, pixel2.g, pixel2.b);
@@ -325,8 +367,6 @@ void displayImage(Image image)
 			// reset colors
 			printf("\x1b[0m");
 		}
-
-		printf("\n");
 	}
 }
 
@@ -469,13 +509,13 @@ Image loadImage(const char TARGET[])
 	return(image);
 }
 
-Image scaleImage(Image oldImage, float xZoom, float yZoom)
+Image scaleImage(Image oldImage, float zoomX, float zoomY)
 {
 	Image newImage;
-	newImage.width = (int)(oldImage.width * xZoom);
-	newImage.height = (int)(oldImage.height * yZoom);
-	float xPixelWidth = 1 / xZoom;
-	float yPixelWidth = 1 / yZoom;
+	newImage.width = (int)(oldImage.width * zoomX);
+	newImage.height = (int)(oldImage.height * zoomY);
+	float xPixelWidth = 1 / zoomX;
+	float yPixelWidth = 1 / zoomY;
 
 	newImage.pixels
 		= (Pixel*)malloc((newImage.width * newImage.height) * sizeof(Pixel));
@@ -517,42 +557,6 @@ Image scaleImage(Image oldImage, float xZoom, float yZoom)
 		}
 	}
 	return(newImage);
-}
-
-void image(const int WIDTH, const int HEIGHT, const char INPUT[])
-{
-	debug("target image: %s", INPUT);
-
-	Image image = loadImage(INPUT);
-
-	debug(
-		"original image dimensions: %d * %d",
-		image.width, image.height
-	);
-
-	float xZoom, yZoom;
-	if(WIDTH == -1 || HEIGHT == -1)
-	{
-		xZoom = min(
-			(float)getWinWidth() / (float)image.width,
-			(float)getWinHeight() / (float)image.height
-		);
-		yZoom = min(
-			(float)getWinWidth() / (float)image.width,
-			(float)getWinHeight() / (float)image.height
-		);
-	}
-	else
-	{
-		xZoom = (float)WIDTH / (float)image.width;
-		yZoom = (float)HEIGHT / (float)image.height;
-	}
-
-	debug("zoom: x: %f, y: %f", xZoom, yZoom);
-
-	displayImage(scaleImage(image, xZoom, yZoom));
-
-	freeImage(&image);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -671,95 +675,6 @@ VideoInfo getVideoInfo(const char TARGET[])
 	return(info);
 }
 
-void video(
-	const int WIDTH, const int HEIGHT,
-	const int FPS, const int FLAG, const char INPUT[], const int SOUND
-)
-{
-	VideoInfo info = getVideoInfo(INPUT);
-
-	float xZoom, yZoom;
-	if(WIDTH == -1 || HEIGHT == -1)
-	{
-		xZoom = min(
-			(float)getWinWidth() / (float)info.width,
-			(float)getWinHeight() / (float)info.height
-		);
-		yZoom = min(
-			(float)getWinWidth() / (float)info.width,
-			(float)getWinHeight() / (float)info.height
-		);
-	}
-	else
-	{
-		xZoom = (float)WIDTH / (float)info.width;
-		yZoom = (float)HEIGHT / (float)info.height;
-	}
-
-	debug("zoom: x: %f,  y: %f", xZoom, yZoom);
-
-	if(FLAG == 0)
-		info.fps = DEFAULT_FPS;
-
-	if(FPS != -1)
-		info.fps = FPS;
-
-	char dir[] = TMP_FOLDER;
-
-	debug("tmp folder: %s", dir);
-
-	struct stat sb;
-
-	// make /tmp/tmv folder if none exists
-	if(stat(dir, &sb) != 0)
-	{
-		debug("could not find tmp folder");
-		mkdir(dir, 0700);
-		debug("created tmp folder: %s", dir);
-	}
-
-	// decode video with ffmpeg into audio
-	char commandA[1000];
-	sprintf(
-		commandA,
-		"ffmpeg -i %s -f wav %s/audio.wav >>/dev/null 2>>/dev/null",
-		INPUT, dir
-	);
-
-	// decode video with ffmpeg into bmp files
-	char commandB[1000];
-	sprintf(
-		commandB,
-		"ffmpeg -i %s -vf \"fps=%d, scale=%d:%d\" %s/frame%%d.bmp >>/dev/null 2>>/dev/null",
-		INPUT, info.fps, (int)(info.width * xZoom), (int)(info.height * yZoom),
-		dir
-	);
-
-	debug("forking");
-
-	// child = plays video, parent = decodes
-	int pid = fork();
-
-	if(pid == 0)
-	{
-
-		char TARGET[1000];
-		sprintf(TARGET, "%s/frame%d.bmp", dir, 1);
-		// wait for first image (ffmpeg takes time to start)
-		while(access(TARGET, F_OK) == -1){}
-		// play the video
-		playVideo(info, SOUND);
-	}
-	else
-	{
-		// audio first
-		system(commandA);
-		system(commandB);
-		// wait for video to finish
-		wait(NULL);
-	}
-}
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Cleanup
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -806,6 +721,156 @@ void cleanup()
 // Main
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
+//---- video ------------------------------------------------------------------//
+
+void video(
+	const int WIDTH, const int HEIGHT,
+	const int FPS, const int FLAG, const char INPUT[], const int SOUND
+)
+{
+	VideoInfo info = getVideoInfo(INPUT);
+
+	float zoomX, zoomY;
+	if(WIDTH == -1 && HEIGHT == -1)
+	{
+		zoomX = min(
+			(float)getWinWidth() / (float)info.width,
+			(float)getWinHeight() / (float)info.height
+		);
+		zoomY = zoomX;
+	}
+	else if(HEIGHT == -1)
+	{
+		zoomX = (float)WIDTH / (float)info.width;
+		zoomY = zoomX;
+	}
+	else if(WIDTH == -1)
+	{
+		zoomY = (float)HEIGHT / (float)info.height;
+		zoomX = zoomY;
+	}
+	else
+	{
+		zoomX = (float)WIDTH / (float)info.width;
+		zoomY = (float)HEIGHT / (float)info.height;
+	}
+
+	debug("zoom: x: %f,  y: %f", zoomX, zoomY);
+
+	if(FLAG == 0)
+		info.fps = DEFAULT_FPS;
+
+	if(FPS != -1)
+		info.fps = FPS;
+
+	char dir[] = TMP_FOLDER;
+
+	debug("tmp folder: %s", dir);
+
+	struct stat sb;
+
+	// make /tmp/tmv folder if none exists
+	if(stat(dir, &sb) != 0)
+	{
+		debug("could not find tmp folder");
+		mkdir(dir, 0700);
+		debug("created tmp folder: %s", dir);
+	}
+
+	// decode video with ffmpeg into audio
+	char commandA[1000];
+	sprintf(
+		commandA,
+		"ffmpeg -i %s -f wav %s/audio.wav >>/dev/null 2>>/dev/null",
+		INPUT, dir
+	);
+
+	// decode video with ffmpeg into bmp files
+	char commandB[1000];
+	sprintf(
+		commandB,
+		"ffmpeg -i %s -vf \"fps=%d, scale=%d:%d\" %s/frame%%d.bmp >>/dev/null 2>>/dev/null",
+		INPUT, info.fps, (int)(info.width * zoomX), (int)(info.height * zoomY),
+		dir
+	);
+
+	clear();
+
+	debug("forking");
+
+	// child = plays video, parent = decodes
+	int pid = fork();
+
+	if(pid == 0)
+	{
+
+		char TARGET[1000];
+		sprintf(TARGET, "%s/frame%d.bmp", dir, 1);
+		// wait for first image (ffmpeg takes time to start)
+		while(access(TARGET, F_OK) == -1){}
+		// play the video
+		playVideo(info, SOUND);
+	}
+	else
+	{
+		// audio first
+		system(commandA);
+		system(commandB);
+		// wait for video to finish
+		wait(NULL);
+	}
+}
+
+//---- image ------------------------------------------------------------------//
+
+void image(const int WIDTH, const int HEIGHT, const char INPUT[])
+{
+	debug("target image: %s", INPUT);
+
+	Image image = loadImage(INPUT);
+
+	debug(
+		"original image dimensions: %d * %d",
+		image.width, image.height
+	);
+
+	float zoomX, zoomY;
+
+	if(WIDTH == -1 && HEIGHT == -1)
+	{
+		zoomX = min(
+			(float)getWinWidth() / (float)image.width,
+			(float)getWinHeight() / (float)image.height
+		);
+		zoomY = zoomX;
+	}
+	else if(HEIGHT == -1)
+	{
+		zoomX = (float)WIDTH / (float)image.width;
+		zoomY = zoomX;
+	}
+	else if(WIDTH == -1)
+	{
+		zoomY = (float)HEIGHT / (float)image.height;
+		zoomX = zoomY;
+	}
+	else
+	{
+		zoomX = (float)WIDTH / (float)image.width;
+		zoomY = (float)HEIGHT / (float)image.height;
+	}
+
+	debug("zoom: x: %f, y: %f", zoomX, zoomY);
+
+	clear();
+
+	displayImage(scaleImage(image, zoomX, zoomY));
+
+	freeImage(&image);
+}
+
+//---- main ------------------------------------------------------------------//
+
 int main(int argc, char *argv[])
 {
 	// cleanup on ctr+c
@@ -828,53 +893,21 @@ int main(int argc, char *argv[])
 	if(access(args.input, F_OK) == -1)
 		error("%s does not exist", args.input);
 
-	// 1: image, 2: video
-	int fileType = 1;
-
 	char *ext = getExtension(args.input);
 
 	debug("file extension: %s", ext);
 
-	int i = 0;
-
-	// check if target is video
-	while(vFormats[i])
-	{
-		if(strcmp(ext, vFormats[i]) == 0)
-		{
-			fileType = 2;
-			break;
-		}
-		else if(strcmp("END", vFormats[i]) == 0)
-			break;
-
-		i++;
-	}
-
-	int width, height;
-
-	if(args.width != -1)
-		width = args.width;
-	else
-		width = getWinWidth();
-
-	if(args.height != -1)
-		height = args.height;
-	else
-		height = getWinHeight();
-
-	debug("display dimentions: %d * %d", width, height);
+	int fileType = checkFileType(ext);
 
 	if(fileType == 1)
 		image(args.width, args.height, args.input);
-
-	else
-	{
+	else if(fileType == 2)
 		video(
 			args.width, args.height, args.fps,
 			args.fpsFlag, args.input, args.sound
 		);
-	}
+	else
+		error("invalid file type");
 
 	cleanup();
 
