@@ -11,7 +11,6 @@
 	<img src="https://img.shields.io/github/workflow/status/kal39/TerminalMediaViewer/make/master">
 	</p>
 </p>
-
 ----
 
 ### Features
@@ -29,11 +28,11 @@
 
 **Viewing an image**
 
-<img src="assets/iVid.gif" width="60%">
+<img src="assets/iGif.gif" width="60%">
 
 **Watching a video**
 
-<img src="assets/vVid.gif" width="60%">
+<img src="assets/vGif.gif" width="60%">
 
 ----
 
