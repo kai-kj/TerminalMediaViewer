@@ -29,11 +29,11 @@
 
 **Viewing an image**
 
-![](assets/iVid.gif)
+<img src="assets/iVid.gif" width="60%">
 
 **Watching a video**
 
-![](assets/vVid.gif)
+<img src="assets/vVid.gif" width="60%">
 
 ----
 
