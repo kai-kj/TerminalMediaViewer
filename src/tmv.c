@@ -788,7 +788,7 @@ void video(
 	char commandA[1000];
 	sprintf(
 		commandA,
-		"ffmpeg -i %s -f wav %s/audio.wav >>/dev/null 2>>/dev/null",
+		"ffmpeg -i \"%s\" -f wav \"%s/audio.wav\" >>/dev/null 2>>/dev/null",
 		INPUT, dir
 	);
 
@@ -798,7 +798,7 @@ void video(
 	char commandB[1000];
 	sprintf(
 		commandB,
-		"ffmpeg -i %s -vf \"fps=%d, scale=%d:%d\" %s/frame%%d.bmp >>/dev/null 2>>/dev/null",
+		"ffmpeg -i \"%s\" -vf \"fps=%d, scale=%d:%d\" \"%s/frame%%d.bmp\" >>/dev/null 2>>/dev/null",
 		INPUT, info.fps, (int)(info.width * zoomX), (int)(info.height * zoomY),
 		dir
 	);
