@@ -87,8 +87,9 @@ make
 ```
 
 ## MacOS
-* [xcode](https://apps.apple.com/us/app/xcode/id497799835)
-* [homebrew](https://docs.brew.sh)
+**Requirements:**
+* [`xcode`](https://apps.apple.com/us/app/xcode/id497799835)
+* [`homebrew`](https://docs.brew.sh)
 * `iterm2`
 * `ffmpeg`
 * `argp-standalone`
