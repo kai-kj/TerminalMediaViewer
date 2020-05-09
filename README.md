@@ -73,7 +73,7 @@ You can download binaries from the [**releases**](https://github.com/kal39/Termi
 ----
 
 ### Build from source
-
+## Linux
 **Requirements:**
 * `ffmpeg`
 * `libavcodec-dev`
@@ -85,6 +85,24 @@ git clone https://github.com/kal39/TerminalMediaViewer.git
 cd TerminalMediaViewer
 make
 ```
+
+## MacOS
+* [xcode](https://apps.apple.com/us/app/xcode/id497799835)
+* [homebrew](https://docs.brew.sh)
+* `iterm2`
+* `ffmpeg`
+* `argp-standalone`
+```
+brew install iterm2
+brew install argp-standalone
+brew install ffmpeg
+git clone https://github.com/kal39/TerminalMediaViewer.git
+cd TerminalMediaViewer
+make -f makefile.macos
+```
+Open iTerm2 to run tmv
+Note: it's laggy. Depending on the video encoding, your mileage may vary.
+Tested with iTerm 3.3.9, ffmpeg 4.2.2, MacOS Catalina 10.5.4, Xcode 11.4.1, argp-standalone 1.3
 
 ----
 
