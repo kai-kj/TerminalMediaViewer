@@ -20,7 +20,7 @@
 * Watch videos from the terminal
 * Play videos with sound
 * Play videos at any fps
-* Resize images / videos (aspect ratio can be changesd or preserved)
+* Resize images / videos (aspect ratio can be changed or preserved)
 * Easy to use
 
 ----
