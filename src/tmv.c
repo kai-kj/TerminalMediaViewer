@@ -439,7 +439,7 @@ void playAudio(const char PATH[])
 
     result = ma_decoder_init_file(PATH, NULL, &decoder);
 
-	if(result != MA_SUCCESS) error("could not initialize deoder");
+	if(result != MA_SUCCESS) error("could not initialize decoder");
 
     deviceConfig = ma_device_config_init(ma_device_type_playback);
     deviceConfig.playback.format   = decoder.outputFormat;
@@ -450,11 +450,11 @@ void playAudio(const char PATH[])
 
     result = ma_device_init(NULL, &deviceConfig, &device);
 
-	if(result != MA_SUCCESS) error("could not initialize deoder");
+	if(result != MA_SUCCESS) error("could not initialize device");
 
     result = ma_device_start(&device);
 
-	if(result != MA_SUCCESS) error("could not initialize deoder");
+	if(result != MA_SUCCESS) error("could not start device");
 }
 
 void stopAudio()
