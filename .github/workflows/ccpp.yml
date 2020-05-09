@@ -25,7 +25,6 @@ jobs:
         rm tmv;
         rm .gitignore;
         rm -r .github;
-        rm -r tests;
         rm -r assets;
         git config --local user.email "githubActions";
         git config --local user.name "Auto Build Action";
