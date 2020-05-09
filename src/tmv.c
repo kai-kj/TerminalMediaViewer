@@ -673,7 +673,6 @@ VideoInfo getVideoInfo(const char TARGET[])
 	info.frameCount = formatCtx->streams[index]->duration;
 
 	debug(
-		__func__,
 		"got video info: %d * %d, fps = %d, frameCount = %d",
 		info.width, info.height, info.fps, info.frameCount
 	);
@@ -793,6 +792,8 @@ void video(
 		INPUT, dir
 	);
 
+	debug("audio command: %s", commandA);
+
 	// decode video with ffmpeg into bmp files
 	char commandB[1000];
 	sprintf(
@@ -801,6 +802,8 @@ void video(
 		INPUT, info.fps, (int)(info.width * zoomX), (int)(info.height * zoomY),
 		dir
 	);
+
+	debug("video command: %s", commandB);
 
 	clear();
 
