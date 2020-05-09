@@ -1,5 +1,10 @@
 //============================================================================//
 // Terminal Media Viewer
+//
+// View images and videos without leaving the console.
+// Requires a terminal that supports truecolor and utf-8
+//
+// https://github.com/kal39/TerminalMediaViewer
 //============================================================================//
 
 /*
@@ -8,7 +13,23 @@ v0.1 - Initial release
 * View images
 * Watch videos (with sound)
 * Resize images / videos
+*/
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+// Usage
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+/*
+tmv [OPTION...] [INPUT FILE]
+
+  -h, --height=[height]      Set output height.
+  -w, --width=[width]        Set output width.
+  -f, --fps=[target fps]     Set target fps. Default 15 fps
+  -F, --origfps              Use original fps from video. Default 15 fps
+  -s, --no-sound             disable sound
+  -?, --help                 Give this help list
+      --usage                Give a short usage message
+  -V, --version              Print program version
 */
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
