@@ -112,8 +112,8 @@ typedef struct VideoInfo
 typedef struct Pixel
 {
 	unsigned short r;
-    	unsigned short g;
-    	unsigned short b;
+	unsigned short g;
+	unsigned short b;
 }Pixel;
 
 typedef struct Image
