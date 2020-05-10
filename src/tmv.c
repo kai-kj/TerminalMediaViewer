@@ -680,6 +680,7 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 	int currentFrame = 1;
 	int prevFrame = 0;
 
+	printf("\033[?25l"); //Hide cursor (avoids that one white pixel when playing video)
 	while(1)
 	{
 		char file[1000];
@@ -709,6 +710,7 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 		prevFrame = currentFrame;
 	}
 	freeImage(&prevImage);
+	printf("\033[?25h"); //show cursor again
 }
 
 VideoInfo getVideoInfo(const char TARGET[])
