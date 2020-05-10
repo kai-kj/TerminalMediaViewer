@@ -20,16 +20,17 @@ v0.1 - Initial release
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 /*
-tmv [OPTION...] [INPUT FILE]
+tmv [OPTION...] [INPUT FILE / URL]
 
+  -y, --youtube              play video from youtube.
   -h, --height=[height]      Set output height.
   -w, --width=[width]        Set output width.
   -f, --fps=[target fps]     Set target fps. Default 15 fps
-  -F, --origfps              Use original fps from video. Default 15 fps
-  -s, --no-sound             disable sound
-  -?, --help                 Give this help list
-      --usage                Give a short usage message
-  -V, --version              Print program version
+  -F, --origfps              Use original fps from video. Default 15 fps.
+  -s, --no-sound             disable sound.
+  -?, --help                 Give this help list.
+      --usage                Give a short usage message.
+  -V, --version              Print program version.
 */
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -184,7 +185,7 @@ int debugFunc(const char *FUNC, const char *FMT, ...)
 	    vsnprintf(msg, sizeof(msg), FMT, args);
 		printf(
 			"\e[33mDEBUG\e[39m(\e[32m%s\e[39m) %s\n"
-			"\e[90m[press ENTER to continue...]\e[39m",
+			"\e[90m[press ENTER to continue...\e[39m",
 			FUNC, msg
 		);
 		getchar();
@@ -226,10 +227,12 @@ char doc[] =
 char args_doc[] = "[INPUT FILE]";
 
 static struct argp_option options[] = {
-    {"width", 'w', "[width]", 0, "Set output width.", 1},
-	{"height", 'h', "[height]", 0, "Set output height.", 1},
-	{"fps", 'f', "[target fps]", 0, "Set target fps. Default 15 fps", 2},
-	{"origfps", 'F', 0, 0, "Use original fps from video. Default 15 fps", 2},
+	{"youtube", 'y', 0, 0, "play video from youtube\
+(use url for input file)", 1},
+    {"width", 'w', "[width]", 0, "Set output width.", 2},
+	{"height", 'h', "[height]", 0, "Set output height.", 2},
+	{"fps", 'f', "[target fps]", 0, "Set target fps. Default 15 fps", 3},
+	{"origfps", 'F', 0, 0, "Use original fps from video. Default 15 fps", 3},
 	{"no-sound", 's', 0, 0, "disable sound", 3},
 	{ 0 }
 };
@@ -241,6 +244,7 @@ struct args {
 	int fps;
 	int fpsFlag;
 	int sound;
+	int youtube;
 };
 
 static error_t parse_option(int key, char *arg, struct argp_state *state)
@@ -271,6 +275,9 @@ static error_t parse_option(int key, char *arg, struct argp_state *state)
 			break;
 		case 's':
 			args->sound = 0;
+			break;
+		case 'y':
+			args->youtube = 1;
 			break;
 		case ARGP_KEY_END:
 			if(args->input == NULL)
@@ -344,6 +351,47 @@ int checkFileType(const char EXT[])
 	}
 
 	return(fileType);
+}
+
+char *replaceWord(const char *STRING, const char *OLD, const char *NEW)
+{
+    char *result;
+    int i, cnt = 0;
+    int newWlen = strlen(NEW);
+    int oldWlen = strlen(OLD);
+
+    // Counting the number of times old word
+    // occur in the string
+    for (i = 0; STRING[i] != '\0'; i++)
+    {
+        if (strstr(&STRING[i], OLD) == &STRING[i])
+        {
+            cnt++;
+
+            // Jumping to index after the old word.
+            i += oldWlen - 1;
+        }
+    }
+
+    // Making new string of enough length
+    result = (char *)malloc(i + cnt * (newWlen - oldWlen) + 1);
+
+    i = 0;
+    while (*STRING)
+    {
+        // compare the substring with the result
+        if (strstr(STRING, OLD) == STRING)
+        {
+            strcpy(&result[i], NEW);
+            i += newWlen;
+            STRING += oldWlen;
+        }
+        else
+            result[i++] = *STRING++;
+    }
+
+    result[i] = '\0';
+    return result;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -756,6 +804,8 @@ void video(
 	const int FPS, const int FLAG, const char INPUT[], const int SOUND
 )
 {
+	debug("target: %s", INPUT);
+
 	//check if ffmpeg is installed
 	if(system("ffmpeg -h >>/dev/null 2>>/dev/null") != 0)
 		error("ffmpeg is not installed");
@@ -905,6 +955,54 @@ void image(const int WIDTH, const int HEIGHT, const char INPUT[])
 	freeImage(&image);
 }
 
+//---- youtube ---------------------------------------------------------------//
+
+void youtube(
+	const int WIDTH, const int HEIGHT,
+	const int FPS, const int FLAG, const char INPUT[], const int SOUND
+)
+{
+	//check if youtube-dl is installed
+	if(system("youtube-dl -h >>/dev/null 2>>/dev/null") != 0)
+		error("youtube-dl is not installed");
+
+	struct stat sb;
+
+	// make /tmp/tmv folder if none exists
+	if(stat(TMP_FOLDER, &sb) != 0)
+	{
+		debug("could not find tmp folder");
+		mkdir(TMP_FOLDER, 0700);
+		debug("created tmp folder: %s", TMP_FOLDER);
+	}
+
+	// download video with youtube-dl
+	char command[1000];
+	sprintf(
+		command,
+		"youtube-dl --geo-bypass --ignore-config -q --no-warnings -f mp4 \
+-o \"%s/video.%%(ext)s\" %s >>/dev/null 2>>/dev/null",
+		TMP_FOLDER, INPUT
+	);
+
+	debug("command: %s", command);
+
+	debug("downloading video");
+	if(system(command) != 0)
+		error("coluld not download video");
+
+	char dir[1000];
+
+	sprintf(dir, "%s/video.mp4", TMP_FOLDER);
+
+	// wait for first image (ffmpeg takes time to start)
+	while(access(dir, F_OK) == -1){}
+
+	debug("finished downloading video");
+
+	video(WIDTH, HEIGHT, FPS, FLAG, dir, SOUND);
+}
+
 //---- main ------------------------------------------------------------------//
 
 int main(int argc, char *argv[])
@@ -921,29 +1019,41 @@ int main(int argc, char *argv[])
 	args.width = -1;
 	args.height = -1;
 	args.sound = 1;
+	args.youtube = 0;
 
 	argp_parse(&argp, argc, argv, 0, 0, &args);
 
-	debug("target file: %s", args.input);
-
-	if(access(args.input, F_OK) == -1)
-		error("%s does not exist", args.input);
-
-	char *ext = getExtension(args.input);
-
-	debug("file extension: %s", ext);
-
-	int fileType = checkFileType(ext);
-
-	if(fileType == 1)
-		image(args.width, args.height, args.input);
-	else if(fileType == 2)
-		video(
+	if(args.youtube == 1)
+	{
+		debug("youtube mode");
+		youtube(
 			args.width, args.height, args.fps,
 			args.fpsFlag, args.input, args.sound
 		);
+	}
 	else
-		error("invalid file type");
+	{
+		debug("target file: %s", args.input);
+
+		if(access(args.input, F_OK) == -1)
+			error("%s does not exist", args.input);
+
+		char *ext = getExtension(args.input);
+
+		debug("file extension: %s", ext);
+
+		int fileType = checkFileType(ext);
+
+		if(fileType == 1)
+			image(args.width, args.height, args.input);
+		else if(fileType == 2)
+			video(
+				args.width, args.height, args.fps,
+				args.fpsFlag, args.input, args.sound
+			);
+		else
+			error("invalid file type");
+	}
 
 	cleanup();
 

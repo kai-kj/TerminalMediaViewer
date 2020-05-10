@@ -16,11 +16,11 @@
 
 ### Features
 
-* View images form the terminal
-* Watch videos from the terminal
-* Play videos with sound
-* Play videos at any fps
-* Resize images / videos (aspect ratio can be changed or preserved)
+* View **images** form any terminal
+* Watch **videos** from any terminal
+* Watch **youtube** videos from any terminal (`-y`, `--youtube`)
+* Play videos at **any fps** (`-f`, `--fps`, `-F`, `--origfps`)
+* **Resize** images / videos (`-w`, `-h`, `--width`, `--height`)
 * Easy to use
 
 ----
@@ -39,18 +39,22 @@
 
 ### Requirements
 
-A terminal that supports **truecolor** ([list](https://gist.github.com/XVilka/8346728)) and **utf-8** (most terminals should support utf-8).
+* A terminal that supports **truecolor** ([list](https://gist.github.com/XVilka/8346728)) and **utf-8** (most terminals should support utf-8).
+* [ffmpeg](https://github.com/FFmpeg/FFmpeg) (only for videos)
+* [youtube-dl](https://github.com/ytdl-org/youtube-dl) (only for youtube videos)
 
 ----
 
 ### Usage
 
-**tmv [`OPTIONS...`] `[INPUT FILE]`**
+**tmv [`OPTIONS...`] `[INPUT FILE / URL]`**
 
 * **`INPUT`**  
 	File to display/play
 
 * **`OPTIONS...`**  
+	* `-y`. `--youtube`  
+		View youtube videos
 	* `-h`, `--height`  
 		Set height (setting both `width` and `height` will ignore original aspect ratio)
 	* `-w`, `--width`  
@@ -60,9 +64,11 @@ A terminal that supports **truecolor** ([list](https://gist.github.com/XVilka/83
 	* `-F`, `--origfps`  
 		Use original fps from video (default 15 fps)
 	* `-s`, `--no-sound`   
-		disable sound
+		Disable sound
 	* `-?`, `--help `  
 		Display help
+	* `-V`  
+		Display version
 
 ----
 
@@ -75,7 +81,6 @@ You can download binaries from the [**releases**](https://github.com/kal39/Termi
 ### Build from source
 ## Linux
 **Requirements:**
-* `ffmpeg`
 * `libavcodec-dev`
 * `libavformat-dev`
 * `libavfilter-dev`
