@@ -756,6 +756,10 @@ void video(
 	const int FPS, const int FLAG, const char INPUT[], const int SOUND
 )
 {
+	//check if ffmpeg is installed
+	if(system("ffmpeg -h >>/dev/null 2>>/dev/null") != 0)
+		error("ffmpeg is not installed");
+
 	VideoInfo info = getVideoInfo(INPUT);
 
 	float zoomX, zoomY;
