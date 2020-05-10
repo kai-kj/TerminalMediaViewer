@@ -680,7 +680,9 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 	int currentFrame = 1;
 	int prevFrame = 0;
 
-	printf("\033[?25l"); //Hide cursor (avoids that one white pixel when playing video)
+	//Hide cursor (avoids that one white pixel when playing video)
+	printf("\033[?25l");
+
 	while(1)
 	{
 		char file[1000];
@@ -710,7 +712,6 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 		prevFrame = currentFrame;
 	}
 	freeImage(&prevImage);
-	printf("\033[?25h"); //show cursor again
 }
 
 VideoInfo getVideoInfo(const char TARGET[])
@@ -759,9 +760,8 @@ VideoInfo getVideoInfo(const char TARGET[])
 
 void cleanup()
 {
-	// move cursor to bottom right and reset colors
-	printf("\x1b[0m \033[%d;%dH\n", getWinWidth(), getWinHeight());
-
+	// move cursor to bottom right and reset colors and show cursor
+	printf("\x1b[0m\033[?25h\033[%d;%dH\n", getWinWidth(), getWinHeight());
 	char dirName[] = TMP_FOLDER;
 
 	debug("tmp folder: %s", dirName);
