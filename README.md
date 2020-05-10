@@ -72,26 +72,22 @@
 
 ----
 
-### Binaries
-
-You can download binaries from the [**releases**](https://github.com/kal39/TerminalMediaViewer/releases) page.
-
-----
-
-### Build from source
-## Linux
+### Building from source
+#### Linux
 **Requirements:**
 * `libavcodec-dev`
 * `libavformat-dev`
 * `libavfilter-dev`
 
-```
-git clone https://github.com/kal39/TerminalMediaViewer.git
-cd TerminalMediaViewer
-make
-```
+**Instructions:**
+1. Clone the repository.  
+	`git clone https://github.com/kal39/TerminalMediaViewer.git`
+2. `cd TerminalMediaViewer`
+3. You can either build the the program locally with `make` or install the program to `/usr/local/bin/` with `make install`.  
 
-## MacOS
+To uninstall run `make uninstall`.
+
+#### MacOS
 **Requirements:**
 * [`xcode`](https://apps.apple.com/us/app/xcode/id497799835)
 * [`homebrew`](https://docs.brew.sh)
@@ -109,6 +105,12 @@ make -f makefile.macos
 Open iTerm2 to run tmv
 Note: it's laggy. Depending on the video encoding, your mileage may vary.
 Tested with iTerm 3.3.9, ffmpeg 4.2.2, MacOS Catalina 10.5.4, Xcode 11.4.1, argp-standalone 1.3
+
+----
+
+### Binaries
+
+You can download pre-built binaries from the [**releases**](https://github.com/kal39/TerminalMediaViewer/releases) page.
 
 ----
 

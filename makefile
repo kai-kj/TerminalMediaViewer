@@ -15,6 +15,10 @@ debug: clean
 # enable debug flags
 	@$(CC) -Wall $(LIBS) src/$(TARGET).c $(FLAGS) -D DEBUG -o $(TARGET)
 
+install: release
+# make release and install to /usr/local/bin/
+	@mv $(TARGET) /usr/local/bin
+
 gdb: clean
 # for debuging with gdb
 	@$(CC) -g $(LIBS) src/$(TARGET).c $(FLAGS) -o $(TARGET).x
@@ -22,6 +26,9 @@ gdb: clean
 clean:
 	@$(RM) $(TARGET)
 	@$(RM) $(TARGET).x
+
+uninstall:
+	@$(RM) /usr/local/bin/$(TARGET)
 
 depend:
 # list deps
