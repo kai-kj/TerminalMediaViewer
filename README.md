@@ -72,7 +72,7 @@
 
 ----
 
-### Building from source
+### Installation
 #### Linux
 **Requirements:**
 * `libavcodec-dev`
