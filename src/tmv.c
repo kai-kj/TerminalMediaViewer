@@ -352,6 +352,47 @@ int checkFileType(const char EXT[])
 	return(fileType);
 }
 
+char *replaceWord(const char *STRING, const char *OLD, const char *NEW)
+{
+    char *result;
+    int i, cnt = 0;
+    int newWlen = strlen(NEW);
+    int oldWlen = strlen(OLD);
+
+    // Counting the number of times old word
+    // occur in the string
+    for (i = 0; STRING[i] != '\0'; i++)
+    {
+        if (strstr(&STRING[i], OLD) == &STRING[i])
+        {
+            cnt++;
+
+            // Jumping to index after the old word.
+            i += oldWlen - 1;
+        }
+    }
+
+    // Making new string of enough length
+    result = (char *)malloc(i + cnt * (newWlen - oldWlen) + 1);
+
+    i = 0;
+    while (*STRING)
+    {
+        // compare the substring with the result
+        if (strstr(STRING, OLD) == STRING)
+        {
+            strcpy(&result[i], NEW);
+            i += newWlen;
+            STRING += oldWlen;
+        }
+        else
+            result[i++] = *STRING++;
+    }
+
+    result[i] = '\0';
+    return result;
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Window
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -762,6 +803,8 @@ void video(
 	const int FPS, const int FLAG, const char INPUT[], const int SOUND
 )
 {
+	debug("target: %s", INPUT);
+
 	//check if ffmpeg is installed
 	if(system("ffmpeg -h >>/dev/null 2>>/dev/null") != 0)
 		error("ffmpeg is not installed");
@@ -922,23 +965,39 @@ void youtube(
 	if(system("youtube-dl -h >>/dev/null 2>>/dev/null") != 0)
 		error("youtube-dl is not installed");
 
+	struct stat sb;
+
+	// make /tmp/tmv folder if none exists
+	if(stat(TMP_FOLDER, &sb) != 0)
+	{
+		debug("could not find tmp folder");
+		mkdir(TMP_FOLDER, 0700);
+		debug("created tmp folder: %s", TMP_FOLDER);
+	}
+
 	// download video with youtube-dl
 	char command[1000];
 	sprintf(
 		command,
-		"youtube-dl --geo-bypass --ignore-config -q --no-warnings -o\
- \"%s/video%%(id)s.%%(ext)s\" \"%s\" >>/dev/null 2>>/dev/null",
+		"youtube-dl --geo-bypass --ignore-config -q --no-warnings -f mp4 \
+-o \"%s/video.%%(ext)s\" %s >>/dev/null 2>>/dev/null",
 		TMP_FOLDER, INPUT
 	);
+
+	debug("command: %s", command);
 
 	debug("downloading video");
 	if(system(command) != 0)
 		error("coluld not download video");
 
-	debug("finished downloading video");
-
 	char dir[1000];
-	sprintf("%s/video.*", TMP_FOLDER);
+
+	sprintf(dir, "%s/video.mp4", TMP_FOLDER);
+
+	// wait for first image (ffmpeg takes time to start)
+	while(access(dir, F_OK) == -1){}
+
+	debug("finished downloading video");
 
 	video(WIDTH, HEIGHT, FPS, FLAG, dir, SOUND);
 }
