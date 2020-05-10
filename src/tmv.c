@@ -20,16 +20,17 @@ v0.1 - Initial release
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 /*
-tmv [OPTION...] [INPUT FILE]
+tmv [OPTION...] [INPUT FILE / URL]
 
+  -y, --youtube              play video from youtube.
   -h, --height=[height]      Set output height.
   -w, --width=[width]        Set output width.
   -f, --fps=[target fps]     Set target fps. Default 15 fps
-  -F, --origfps              Use original fps from video. Default 15 fps
-  -s, --no-sound             disable sound
-  -?, --help                 Give this help list
-      --usage                Give a short usage message
-  -V, --version              Print program version
+  -F, --origfps              Use original fps from video. Default 15 fps.
+  -s, --no-sound             disable sound.
+  -?, --help                 Give this help list.
+      --usage                Give a short usage message.
+  -V, --version              Print program version.
 */
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
