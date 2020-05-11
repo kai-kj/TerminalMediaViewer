@@ -7,7 +7,10 @@
 // https://github.com/kal39/TerminalMediaViewer
 //============================================================================//
 
-/*
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+// Changelog
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
 v0.1.1 - Youtube Support
 
 * Improved memory usage
@@ -22,13 +25,13 @@ v0.1 - Initial release
 * View images
 * Watch videos (with sound)
 * Resize images / videos
+
 */
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Usage
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-/*
 tmv [OPTION...] [INPUT FILE / URL]
 
   -y, --youtube              play video from youtube.
@@ -40,6 +43,7 @@ tmv [OPTION...] [INPUT FILE / URL]
   -?, --help                 Give this help list.
       --usage                Give a short usage message.
   -V, --version              Print program version.
+
 */
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -495,7 +499,9 @@ void updateScreen(Image image, Image prevImage)
 // Audio
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
+void data_callback(
+	ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount
+)
 {
     ma_decoder* pDecoder = (ma_decoder*)pDevice->pUserData;
     if (pDecoder == NULL) {
@@ -657,7 +663,8 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 	prevImage.width = INFO.width;
 	prevImage.height = INFO.height;
 
-	prevImage.pixels = (Pixel*)malloc((INFO.width * INFO.height) * sizeof(Pixel));
+	prevImage.pixels
+		= (Pixel*)malloc((INFO.width * INFO.height) * sizeof(Pixel));
 
 	if(prevImage.pixels == NULL)
 		error("failed to allocate memory for prevImage");
@@ -808,7 +815,7 @@ void cleanup()
 // Main
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-//---- video ------------------------------------------------------------------//
+//---- video -----------------------------------------------------------------//
 
 void video(
 	const int WIDTH, const int HEIGHT,
@@ -884,7 +891,8 @@ void video(
 	char commandB[1000];
 	sprintf(
 		commandB,
-		"ffmpeg -i \"%s\" -vf \"fps=%d, scale=%d:%d\" \"%s/frame%%d.bmp\" >>/dev/null 2>>/dev/null",
+		"ffmpeg -i \"%s\" -vf \"fps=%d, scale=%d:%d\" \"%s/frame%%d.bmp\"\
+ >>/dev/null 2>>/dev/null",
 		INPUT, info.fps, (int)(info.width * zoomX), (int)(info.height * zoomY),
 		dir
 	);
@@ -918,7 +926,7 @@ void video(
 	}
 }
 
-//---- image ------------------------------------------------------------------//
+//---- image -----------------------------------------------------------------//
 
 void image(const int WIDTH, const int HEIGHT, const char INPUT[])
 {
