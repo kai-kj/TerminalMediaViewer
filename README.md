@@ -118,7 +118,7 @@ You can download pre-built binaries from the [**releases**](https://github.com/k
 
 ### Releases
 
-* **`v0.1.1` Youtube Support**  
+* **[`v0.1.1`](https://github.com/kal39/TerminalMediaViewer/releases/tag/v0.1.1) Youtube Support**  
 	TerminalMediaViewer can now play videos directly from youtube.  
 	To play videos from youtube, use the `-y` option.
 
@@ -129,7 +129,7 @@ You can download pre-built binaries from the [**releases**](https://github.com/k
 	* Check if ffmpeg and YouTube exist before playing videos
 	* Better error and debug messages
 
-* **`v0.1` Initial release**  
+* **[`v0.1`](https://github.com/kal39/TerminalMediaViewer/releases/tag/v0.1) Initial release**  
 	Initial release of tmv.  
 	It is in a very early state so bugs are expected.
 
