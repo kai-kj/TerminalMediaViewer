@@ -8,6 +8,15 @@
 //============================================================================//
 
 /*
+v0.1.1 - Youtube Support
+
+* Improved memory usage
+* Cursor is now hidden during videos
+* Supports spaces in video filenames
+* Play videos directly from youtube
+* Check if ffmpeg and YouTube exist before playing videos
+* Better error and debug messages
+
 v0.1 - Initial release
 
 * View images
