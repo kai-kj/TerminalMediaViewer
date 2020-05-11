@@ -94,6 +94,8 @@ To uninstall run `make uninstall`.
 * `iterm2`
 * `ffmpeg`
 * `argp-standalone`
+
+**Instructions:**
 ```
 brew install iterm2
 brew install argp-standalone
@@ -102,15 +104,38 @@ git clone https://github.com/kal39/TerminalMediaViewer.git
 cd TerminalMediaViewer
 make -f makefile.macos
 ```
-Open iTerm2 to run tmv
-Note: it's laggy. Depending on the video encoding, your mileage may vary.
-Tested with iTerm 3.3.9, ffmpeg 4.2.2, MacOS Catalina 10.5.4, Xcode 11.4.1, argp-standalone 1.3
+Open iTerm2 to run tmv  
+> Note: it's laggy. Depending on the video encoding, your mileage may vary.  
+> Tested with `iTerm 3.3.9`, `ffmpeg 4.2.2`, `MacOS Catalina 10.5.4`, `Xcode 11.4.1`, `argp-> standalone 1.3`
 
 ----
 
 ### Binaries
 
 You can download pre-built binaries from the [**releases**](https://github.com/kal39/TerminalMediaViewer/releases) page.
+
+----
+
+### Releases
+
+* **`v0.1.1` Youtube Support**  
+	TerminalMediaViewer can now play videos directly from youtube.  
+	To play videos from youtube, use the `-y` option.
+
+	* Improved memory usage
+	* Cursor is now hidden during videos
+	* Supports spaces in video filenames
+	* **Play videos directly from youtube**
+	* Check if ffmpeg and YouTube exist before playing videos
+	* Better error and debug messages
+
+* **`v0.1` Initial release**  
+	Initial release of tmv.  
+	It is in a very early state so bugs are expected.
+
+	* View images
+	* Watch videos (with sound)
+	* Resize images / videos
 
 ----
 
