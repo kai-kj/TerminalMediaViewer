@@ -436,33 +436,12 @@ void clear()
 // Screen
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-void displayImage(Image image)
-{
-	for(int i = 0; i < image.height - 1; i += 2) // update 2 pixels at once
-	{
-		for(int j = 0; j < image.width - 1; j++)
-		{
-			#define pixel1 image.pixels[i * image.width + j]
-			#define pixel2 image.pixels[(i + 1) * image.width + j]
-
-			// move cursor
-			printf("\033[%d;%dH", i / 2 + 1, j + 1);
-
-			// set foreground and background colors
-			printf("\x1b[48;2;%d;%d;%dm", pixel1.r, pixel1.g, pixel1.b);
-			printf("\x1b[38;2;%d;%d;%dm", pixel2.r, pixel2.g, pixel2.b);
-
-			printf("▄");
-
-			// reset colors
-			printf("\x1b[0m");
-		}
-	}
-}
-
-// only updates changed pixels (-> faster than displayImage())
+// only updates changed pixels
 void updateScreen(Image image, Image prevImage)
 {
+	//Hide cursor (avoids that one white pixel when playing video)
+	printf("\033[?25l");
+
 	for(int i = 0; i < image.height - 1; i += 2) // update 2 pixels at once
 	{
 		for(int j = 0; j < image.width - 1; j++)
@@ -696,8 +675,7 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 	int currentFrame = 1;
 	int prevFrame = 0;
 
-	//Hide cursor (avoids that one white pixel when playing video)
-	printf("\033[?25l");
+	clear();
 
 	while(1)
 	{
@@ -899,8 +877,6 @@ void video(
 
 	debug("video command: %s", commandB);
 
-	clear();
-
 	debug("forking");
 
 	// child = plays video, parent = decodes
@@ -967,9 +943,34 @@ void image(const int WIDTH, const int HEIGHT, const char INPUT[])
 
 	debug("zoom: x: %f, y: %f", zoomX, zoomY);
 
+	image = scaleImage(image, zoomX, zoomY);
+
+	Image prevImage;
+	prevImage.width = image.width;
+	prevImage.height = image.height;
+
+	prevImage.pixels
+		= (Pixel*)malloc((image.width * image.height) * sizeof(Pixel));
+
+	if(prevImage.pixels == NULL)
+		error("failed to allocate memory for prevImage");
+
+	debug("allocated memory for prevImage");
+
+	// initialize all colors to -1 to force update when calling updateScreen()
+	for(int i = 0; i < image.height; i++)
+	{
+		for(int j = 0; j < image.width; j++)
+		{
+			prevImage.pixels[i * image.width + j].r = -1;
+			prevImage.pixels[i * image.width + j].g = -1;
+			prevImage.pixels[i * image.width + j].b = -1;
+		}
+	}
+
 	clear();
 
-	displayImage(scaleImage(image, zoomX, zoomY));
+	updateScreen(image, prevImage);
 
 	freeImage(&image);
 }
@@ -1007,8 +1008,9 @@ void youtube(
 	debug("command: %s", command);
 
 	debug("downloading video");
+	
 	if(system(command) != 0)
-		error("coluld not download video");
+		error("could not download video");
 
 	char dir[1000];
 
