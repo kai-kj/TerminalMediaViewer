@@ -1,13 +1,21 @@
+OS = $(shell uname)
+
+ifeq ($(OS), )
+	OS = Windows
+endif
+
 CC = gcc
-RM = rm -f
+
+ifeq ($(OS), Windows)
+	RM = del /f
+else
+	RM = rm -f
+endif
 
 TARGET = tmv
 
-LIBS = -L/opt/ffmpeg/lib -I/opt/ffmpeg/include/
 FLAGS = -lm -lavcodec -lavformat -lavfilter -lavdevice -lswresample -lswscale -lavutil -lpthread -ldl
 OSXFLAGS = -lm -lavcodec -lavformat -lavfilter -lavdevice -lswresample -lswscale -lavutil -lpthread -ldl -largp
-
-OS = $(shell uname)
 
 release: clean
 # no debug flags
@@ -16,7 +24,9 @@ release: clean
 ifeq ($(OS), Darwin)
 # osx
 	@$(CC) src/$(TARGET).c $(OSXFLAGS) -o $(TARGET)
-else
+else ifeq ($(OS), Windows)
+# windows
+	@$(CC) src\$(TARGET).c -o $(TARGET)
 # linux
 	@$(CC) src/$(TARGET).c $(FLAGS) -o $(TARGET)
 endif
@@ -24,7 +34,7 @@ endif
 
 debug: clean
 # enable debug flags
-	@$(CC) -Wall $(LIBS) src/$(TARGET).c $(FLAGS) -D DEBUG -o $(TARGET)
+	@$(CC) -Wall src/$(TARGET).c $(FLAGS) -D DEBUG -o $(TARGET)
 
 install: release
 # make release and install to /usr/local/bin/
