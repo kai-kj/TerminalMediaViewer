@@ -15,7 +15,7 @@ release: clean
 	@echo "OS: $(OS)"
 ifeq ($(OS), Darwin)
 # osx
-	@$(CC) $(LIBS) src/$(TARGET).c $(OSXFLAGS) -o $(TARGET)
+	@$(CC) src/$(TARGET).c $(OSXFLAGS) -o $(TARGET)
 else
 # linux
 	@$(CC) src/$(TARGET).c $(FLAGS) -o $(TARGET)
