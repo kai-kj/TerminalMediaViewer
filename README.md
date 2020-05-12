@@ -83,30 +83,39 @@
 1. Clone the repository.  
 	`git clone https://github.com/kal39/TerminalMediaViewer.git`
 2. `cd TerminalMediaViewer`
-3. You can either build the the program locally with `make` or install the program to `/usr/local/bin/` with `make install`.  
+3. You can either build the the program locally with `make` or install the program to `/usr/local/bin/` with `make install` (needs sudo privileges).
 
-To uninstall run `make uninstall`.
+To uninstall run `make uninstall` (needs sudo privileges).
 
 #### MacOS
 **Requirements:**
-* [`xcode`](https://apps.apple.com/us/app/xcode/id497799835)
 * [`homebrew`](https://docs.brew.sh)
 * `iterm2`
 * `ffmpeg`
+* `youtube-dl`
 * `argp-standalone`
 
-**Instructions:**
-```
-brew install iterm2
-brew install argp-standalone
-brew install ffmpeg
-git clone https://github.com/kal39/TerminalMediaViewer.git
-cd TerminalMediaViewer
-make -f makefile.macos
-```
-Open iTerm2 to run tmv  
-> Note: it's laggy. Depending on the video encoding, your mileage may vary.  
-> Tested with `iTerm 3.3.9`, `ffmpeg 4.2.2`, `MacOS Catalina 10.5.4`, `Xcode 11.4.1`, `argp-> standalone 1.3`
+**Instructions:**  
+1. Inatall dependecies
+	```
+	brew install iterm2
+	brew install argp-standalone
+	brew install ffmpeg
+	brew install youtube-dl
+	```
+2. Clone the repository and run make.
+	```
+	git clone https://github.com/kal39/TerminalMediaViewer.git
+	cd TerminalMediaViewer
+	make
+	```
+	To install tmv you can run `make install` (needs sudo privileges).  
+	To uninstall run `make uninstall` (needs sudo privileges).
+
+
+> **Only works on iTerm2.**
+
+> There are some performance issues. Depending on the video encoding, your mileage may vary.
 
 ----
 
