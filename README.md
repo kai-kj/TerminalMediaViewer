@@ -96,7 +96,7 @@ To uninstall run `make uninstall` (needs sudo privileges).
 * `argp-standalone`
 
 **Instructions:**  
-1. Inatall dependecies
+1. Install dependencies
 	```
 	brew install iterm2
 	brew install argp-standalone
