@@ -1,4 +1,5 @@
 OS = $(shell uname)
+SFLAG = $(shell id -u)
 
 ifeq ($(OS), )
 	OS = Windows
@@ -44,27 +45,38 @@ debug: clean
 
 #---- make release and install to /usr/local/bin/ -----------------------------#
 install: release
+# check if sudo
+ifeq ($(SFLAG), 0)
 	@echo "Installing..."
 	@mv $(TARGET) /usr/local/bin
 	@echo "Done"
+else
+	@echo "\nERROR: sudo privileges needed for install\n"
+endif
+
+#---- remove /usr/local/bin/tmv -----------------------------------------------#
+uninstall:
+# check if sudo
+ifeq ($(SFLAG), 0)
+	@echo "Uninstalling..."
+	@$(RM) /usr/local/bin/$(TARGET)
+	@echo "Done"
+else
+	@echo "\nERROR: sudo privileges needed for uninstall\n"
+endif
 
 #---- for debuging with gdb ---------------------------------------------------#
 gdb: clean
 	@$(CC) -g $(LIBS) src/$(TARGET).c $(FLAGS) -o $(TARGET).x
 
+#---- list deps ---------------------------------------------------------------#
+depend:
+	@$(CC) $(LIBS) src/$(TARGET).c $(FLAGS) -M
+
 #---- remove local binaries ---------------------------------------------------#
 clean:
+	@echo $(SFLAG)
 	@echo "Deleting old binaries..."
 	@$(RM) $(TARGET)
 	@$(RM) $(TARGET).x
 	@echo "Done"
-
-#---- remove /usr/local/bin/tmv -----------------------------------------------#
-uninstall:
-	@echo "Uninstalling..."
-	@$(RM) /usr/local/bin/$(TARGET)
-	@echo "Done"
-
-#---- list deps ---------------------------------------------------------------#
-depend:
-	@$(CC) $(LIBS) src/$(TARGET).c $(FLAGS) -M
