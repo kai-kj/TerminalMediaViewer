@@ -79,6 +79,7 @@ SOFTWARE.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 #define  _POSIX_C_SOURCE 200809L
+#define _DEFAULT_SOURCE
 
 //-------- standard libraries ------------------------------------------------//
 
@@ -770,11 +771,11 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 			{
 				c = getch();
 				c = getch();
-				/*if(c == 67)
+				if(c == 67)
 					time += 5;
 				if(c == 68)
 					time -= 5;
-				*/
+				
 			}
 			else if(c == 32)
 			{
@@ -812,12 +813,18 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 			prevImage = copyImage(currentImage);
 			freeImage(&currentImage);
 		}
-		else
+		//else
+		//{
+		//	debug("next file (%s) not found", file);
+		//	freeImage(&prevImage);
+		//	break;
+		//}
+		if(time > INFO.duration)
 		{
-			debug("next file (%s) not found", file);
 			freeImage(&prevImage);
 			break;
 		}
+
 	}
 	freeImage(&prevImage);
 }
