@@ -44,7 +44,7 @@ debug: clean
 	@echo "Done"
 
 #---- make release and install to /usr/local/bin/ -----------------------------#
-install: release
+install: release uninstall
 # check if sudo
 ifeq ($(SFLAG), 0)
 	@echo "Installing..."
@@ -75,7 +75,6 @@ depend:
 
 #---- remove local binaries ---------------------------------------------------#
 clean:
-	@echo $(SFLAG)
 	@echo "Deleting old binaries..."
 	@$(RM) $(TARGET)
 	@$(RM) $(TARGET).x
