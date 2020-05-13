@@ -89,13 +89,15 @@ SOFTWARE.
 #include <dirent.h>
 #include <argp.h>
 #include <termios.h>
+#include <string.h>
 
 //-------- POSIX libraries ---------------------------------------------------//
 
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
-#include<sys/wait.h>
+#include <sys/wait.h>
+#include <sys/select.h>
 
 //-------- ffmpeg ------------------------------------------------------------//
 
@@ -553,6 +555,67 @@ void stopAudio()
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+// Init
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+void init()
+{
+	struct termios new_termios;
+
+	/* take two copies - one for now, one for later */
+	tcgetattr(0, &orig_termios);
+	memcpy(&new_termios, &orig_termios, sizeof(new_termios));
+
+	cfmakeraw(&new_termios);
+	tcsetattr(0, TCSANOW, &new_termios);
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+// Cleanup
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+void cleanup()
+{
+	// reset terminal mode
+	tcsetattr(0, TCSANOW, &orig_termios);
+
+	// move cursor to bottom right and reset colors and show cursor
+	printf("\x1b[0m\033[?25h\033[%d;%dH\n\n", getWinWidth(), getWinHeight());
+	
+	char dirName[] = TMP_FOLDER;
+
+	debug("tmp folder: %s", dirName);
+
+	DIR *dir = opendir(dirName);
+
+	if(dir == NULL)
+	{
+		debug("failed to open tmp folder");
+		exit(0);
+	}
+
+    struct dirent *next_file;
+    char filepath[NAME_MAX * 2 + 1];
+
+	int count = 0;
+
+	// delete all images that were left
+    while((next_file = readdir(dir)) != NULL)
+    {
+        sprintf(filepath, "%s/%s", dirName, next_file->d_name);
+        remove(filepath);
+		count++;
+    }
+    closedir(dir);
+
+	debug("deleted %d images", count);
+
+	stopAudio();
+
+	exit(0);
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Image
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
@@ -695,16 +758,14 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 		"starting audio (%s) and video (%d fps)", audioDir, INFO.fps
 	);
 
-	if(SOUND == 1) playAudio(audioDir);
-
 	float prevTime = getTime();
 	float time = 0;
 	int pause = 0;
 
-	int currentFrame = 1;
-	int prevFrame = 0;
-
+	init();
 	clear();
+
+	if(SOUND == 1) playAudio(audioDir);
 
 	while(1)
 	{
@@ -712,21 +773,18 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 		if(kbhit())
 		{
 			char c = getch();
+
+			if(c == 3)
+				cleanup();
+
 			if(c == 27)
 			{
 				c = getch();
 				c = getch();
-				switch(c)
-				{
-				case 67:
+				if(c == 67)
 					time += 5;
-					break;
-				case 68:
+				if(c == 68)
 					time -= 5;
-					break;
-				default:
-					break;
-				}
 			}
 			else if(c == 32)
 			{
@@ -746,28 +804,24 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 		prevTime = getTime();
 
 		char file[1000];
-		currentFrame = (int)floor(INFO.fps * time);
+		int currentFrame = (int)floor(INFO.fps * time);
 		// frames start from 1
 		if(currentFrame < 1)currentFrame = 1;
 		sprintf(file, "%s/frame%d.bmp", TMP_FOLDER, currentFrame);
 
-		if(currentFrame != prevFrame) // don't draw same frame twice
+		if(access(file, F_OK) != - 1)
 		{
-			if(access(file, F_OK) != - 1)
-			{
-				Image currentImage = loadImage(file);
-				updateScreen(currentImage, prevImage);
-				prevImage = copyImage(currentImage);
-				freeImage(&currentImage);
-			}
-			else
-			{
-				debug("next file (%s) not found", file);
-				freeImage(&prevImage);
-				break;
-			}
+			Image currentImage = loadImage(file);
+			updateScreen(currentImage, prevImage);
+			prevImage = copyImage(currentImage);
+			freeImage(&currentImage);
 		}
-		prevFrame = currentFrame;
+		else
+		{
+			debug("next file (%s) not found", file);
+			freeImage(&prevImage);
+			break;
+		}
 	}
 	freeImage(&prevImage);
 }
@@ -811,67 +865,6 @@ VideoInfo getVideoInfo(const char TARGET[])
 	free(formatCtx);
 
 	return(info);
-}
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-// Init
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-
-void init()
-{
-	struct termios new_termios;
-
-	/* take two copies - one for now, one for later */
-	tcgetattr(0, &orig_termios);
-	memcpy(&new_termios, &orig_termios, sizeof(new_termios));
-
-	cfmakeraw(&new_termios);
-	tcsetattr(0, TCSANOW, &new_termios);
-}
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-// Cleanup
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-
-void cleanup()
-{
-	// reset terminal mode
-	tcsetattr(0, TCSANOW, &orig_termios);
-
-	// move cursor to bottom right and reset colors and show cursor
-	printf("\x1b[0m\033[?25h\033[%d;%dH\n", getWinWidth(), getWinHeight());
-	
-	char dirName[] = TMP_FOLDER;
-
-	debug("tmp folder: %s", dirName);
-
-	DIR *dir = opendir(dirName);
-
-	if(dir == NULL)
-	{
-		debug("failed to open tmp folder");
-		exit(0);
-	}
-
-    struct dirent *next_file;
-    char filepath[NAME_MAX * 2 + 1];
-
-	int count = 0;
-
-	// delete all images that were left
-    while((next_file = readdir(dir)) != NULL)
-    {
-        sprintf(filepath, "%s/%s", dirName, next_file->d_name);
-        remove(filepath);
-		count++;
-    }
-    closedir(dir);
-
-	debug("deleted %d images", count);
-
-	stopAudio();
-
-	exit(0);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -1115,8 +1108,6 @@ int main(int argc, char *argv[])
 {
 	// cleanup on ctr+c
 	signal(SIGINT, cleanup);
-
-	init();
 
 	// setup argp
 	struct args args = {0};

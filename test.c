@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 {
 	set_conio_terminal_mode();
 
-	float t = 0;
+	/*float t = 0;
 	int p = 0;
 	float prevTime = getTime();
 
@@ -110,7 +110,20 @@ int main(int argc, char *argv[])
 		system("clear");
 		printf("TIME: %f[s]\n", t);
 		printf("PAUSED: %d\n", p);
+	}*/
+
+	while (1)
+	{
+		if(kbhit)
+		{
+			char c = getch();
+			if(c == 'q')
+				break;
+
+			printf("%d: %c\n", c, c);
+		}
 	}
+	
 }
 
 /*
