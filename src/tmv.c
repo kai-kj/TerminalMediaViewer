@@ -188,8 +188,6 @@ Image copyImage(Image image)
 	return(newImage);
 }
 
-struct termios orig_termios;
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Debug
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -441,6 +439,13 @@ void clear()
 // Input
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
+void init()
+{
+	struct termios new_termios;
+	cfmakeraw(&new_termios);
+	tcsetattr(0, TCSANOW, &new_termios);
+}
+
 int kbhit()
 {
 	struct timeval tv = { 0L, 0L };
@@ -555,31 +560,12 @@ void stopAudio()
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-// Init
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-
-void init()
-{
-	struct termios new_termios;
-
-	/* take two copies - one for now, one for later */
-	tcgetattr(0, &orig_termios);
-	memcpy(&new_termios, &orig_termios, sizeof(new_termios));
-
-	cfmakeraw(&new_termios);
-	tcsetattr(0, TCSANOW, &new_termios);
-}
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Cleanup
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 void cleanup()
 {
-	// reset terminal mode
-	tcsetattr(0, TCSANOW, &orig_termios);
-
-	// move cursor to bottom right and reset colors and show cursor
+	// reset color and move cursor to bottom right
 	printf("\x1b[0m\033[?25h\033[%d;%dH\n\n", getWinWidth(), getWinHeight());
 	
 	char dirName[] = TMP_FOLDER;
@@ -611,6 +597,9 @@ void cleanup()
 	debug("deleted %d images", count);
 
 	stopAudio();
+
+	// just to make sure
+	system("reset >>/dev/null 2>>/dev/null");
 
 	exit(0);
 }
@@ -781,17 +770,24 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 			{
 				c = getch();
 				c = getch();
-				if(c == 67)
+				/*if(c == 67)
 					time += 5;
 				if(c == 68)
 					time -= 5;
+				*/
 			}
 			else if(c == 32)
 			{
 				if(pause == 0)
+				{
+					ma_device_stop(&device);
 					pause = 1;
+				}
 				else if(pause == 1)
+				{
+					ma_device_start(&device);
 					pause = 0;
+				}
 			}
 		}
 
