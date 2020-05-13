@@ -34,7 +34,9 @@ endif
 
 debug: clean
 # enable debug flags
+	@echo "Building with debug flag"
 	@$(CC) -Wall src/$(TARGET).c $(FLAGS) -D DEBUG -o $(TARGET)
+	@echo "Done"
 
 install: release
 # make release and install to /usr/local/bin/

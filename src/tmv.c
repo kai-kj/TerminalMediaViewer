@@ -88,6 +88,7 @@ SOFTWARE.
 #include <signal.h>
 #include <dirent.h>
 #include <argp.h>
+#include <termios.h>
 
 //-------- POSIX libraries ---------------------------------------------------//
 
@@ -141,7 +142,7 @@ typedef struct VideoInfo
 	int width;
 	int height;
 	int fps;
-	int frameCount;
+	float duration;
 }VideoInfo;
 
 typedef struct Pixel
@@ -185,6 +186,8 @@ Image copyImage(Image image)
 	return(newImage);
 }
 
+struct termios orig_termios;
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Debug
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -198,7 +201,7 @@ int debugFunc(const char *FUNC, const char *FMT, ...)
 	    vsnprintf(msg, sizeof(msg), FMT, args);
 		printf(
 			"\e[33mDEBUG\e[39m(\e[32m%s\e[39m) %s\n"
-			"\e[90m[press ENTER to continue...\e[39m",
+			"\e[90m[press ENTER to continue...]\e[39m",
 			FUNC, msg
 		);
 		getchar();
@@ -430,6 +433,29 @@ void clear()
 {
 	for(int i = 0; i < getWinHeight(); i++)
 		printf("\n");
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+// Input
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+int kbhit()
+{
+	struct timeval tv = { 0L, 0L };
+	fd_set fds;
+	FD_ZERO(&fds);
+	FD_SET(0, &fds);
+	return select(1, &fds, NULL, NULL, &tv);
+}
+
+int getch()
+{
+	int r;
+	unsigned char c;
+	if((r = read(0, &c, sizeof(c))) < 0)
+		return r;
+	else
+		return c;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -671,7 +697,10 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 
 	if(SOUND == 1) playAudio(audioDir);
 
-	float sTime = getTime();
+	float prevTime = getTime();
+	float time = 0;
+	int pause = 0;
+
 	int currentFrame = 1;
 	int prevFrame = 0;
 
@@ -679,8 +708,45 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 
 	while(1)
 	{
+		// input
+		if(kbhit())
+		{
+			char c = getch();
+			if(c == 27)
+			{
+				c = getch();
+				c = getch();
+				switch(c)
+				{
+				case 67:
+					time += 5;
+					break;
+				case 68:
+					time -= 5;
+					break;
+				default:
+					break;
+				}
+			}
+			else if(c == 32)
+			{
+				if(pause == 0)
+					pause = 1;
+				else if(pause == 1)
+					pause = 0;
+			}
+		}
+
+		if(pause == 0)
+			time += getTime() - prevTime;
+
+		if(time < 0)
+			time = 0;
+
+		prevTime = getTime();
+
 		char file[1000];
-		currentFrame = (int)floor(INFO.fps * (getTime() - sTime));
+		currentFrame = (int)floor(INFO.fps * time);
 		// frames start from 1
 		if(currentFrame < 1)currentFrame = 1;
 		sprintf(file, "%s/frame%d.bmp", TMP_FOLDER, currentFrame);
@@ -693,8 +759,6 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 				updateScreen(currentImage, prevImage);
 				prevImage = copyImage(currentImage);
 				freeImage(&currentImage);
-				// delete old frames
-				remove(file);
 			}
 			else
 			{
@@ -736,11 +800,12 @@ VideoInfo getVideoInfo(const char TARGET[])
 	}
 
 	info.fps = formatCtx->streams[index]->r_frame_rate.num;
-	info.frameCount = formatCtx->streams[index]->duration;
+	info.duration = formatCtx->duration / AV_TIME_BASE;
 
 	debug(
-		"got video info: %d * %d, fps = %d, frameCount = %d",
-		info.width, info.height, info.fps, info.frameCount
+		"got video info: %d * %d, fps = %d, time = %f[min]",
+		info.width, info.height, info.fps,
+		info.duration / 60
 	);
 
 	free(formatCtx);
@@ -749,13 +814,33 @@ VideoInfo getVideoInfo(const char TARGET[])
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+// Init
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+void init()
+{
+	struct termios new_termios;
+
+	/* take two copies - one for now, one for later */
+	tcgetattr(0, &orig_termios);
+	memcpy(&new_termios, &orig_termios, sizeof(new_termios));
+
+	cfmakeraw(&new_termios);
+	tcsetattr(0, TCSANOW, &new_termios);
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Cleanup
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 void cleanup()
 {
+	// reset terminal mode
+	tcsetattr(0, TCSANOW, &orig_termios);
+
 	// move cursor to bottom right and reset colors and show cursor
 	printf("\x1b[0m\033[?25h\033[%d;%dH\n", getWinWidth(), getWinHeight());
+	
 	char dirName[] = TMP_FOLDER;
 
 	debug("tmp folder: %s", dirName);
@@ -1031,6 +1116,8 @@ int main(int argc, char *argv[])
 	// cleanup on ctr+c
 	signal(SIGINT, cleanup);
 
+	init();
+
 	// setup argp
 	struct args args = {0};
 
@@ -1057,7 +1144,7 @@ int main(int argc, char *argv[])
 		debug("target file: %s", args.input);
 
 		if(access(args.input, F_OK) == -1)
-			error("%s does not exist", args.input);
+			error("%s does not exist. If it is a url use the -y flag", args.input);
 
 		char *ext = getExtension(args.input);
 
