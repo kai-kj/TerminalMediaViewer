@@ -35,23 +35,31 @@ else
 	@echo "Building for linux..."
 	@$(CC) src/$(TARGET).c $(FLAGS) -o $(TARGET)
 endif
-	@echo "Done"
+	@echo "\e[32mDONE\e[39m"
+
+ifeq (, $(shell which ffmpeg))
+	@echo "\e[33mNOTE\e[39m: ffmpeg is not installed (can't play videos)"
+endif
+
+ifeq (, $(shell which youtube-dl))
+	@echo "\e[33mNOTE\e[39m: youtube-dl is not installed (can't download videos)"
+endif
 
 #---- enable debug flags ------------------------------------------------------#
 debug: clean
 	@echo "Building with debug flag"
 	@$(CC) -Wall src/$(TARGET).c $(FLAGS) -D DEBUG -o $(TARGET)
-	@echo "Done"
+	@echo "\e[32mDONE\e[39m"
 
 #---- make release and install to /usr/local/bin/ -----------------------------#
-install: release uninstall
+install: uninstall release
 # check if sudo
 ifeq ($(SFLAG), 0)
 	@echo "Installing..."
 	@mv $(TARGET) /usr/local/bin
-	@echo "Done"
+	@echo "\e[32mDONE\e[39m"
 else
-	@echo "\nERROR: sudo privileges needed for install\n"
+	@echo "\e[31mERROR\e[39m: sudo privileges needed for install"
 endif
 
 #---- remove /usr/local/bin/tmv -----------------------------------------------#
@@ -60,9 +68,9 @@ uninstall:
 ifeq ($(SFLAG), 0)
 	@echo "Uninstalling..."
 	@$(RM) /usr/local/bin/$(TARGET)
-	@echo "Done"
+	@echo "\e[32mDONE\e[39m"
 else
-	@echo "\nERROR: sudo privileges needed for uninstall\n"
+	@echo "\e[31mERROR\e[39m: sudo privileges needed for uninstall"
 endif
 
 #---- for debuging with gdb ---------------------------------------------------#
@@ -78,4 +86,4 @@ clean:
 	@echo "Deleting old binaries..."
 	@$(RM) $(TARGET)
 	@$(RM) $(TARGET).x
-	@echo "Done"
+	@echo "\e[32mDONE\e[39m"
