@@ -141,7 +141,7 @@ typedef struct VideoInfo
 	int width;
 	int height;
 	int fps;
-	int frameCount;
+	float duration;
 }VideoInfo;
 
 typedef struct Pixel
@@ -198,7 +198,7 @@ int debugFunc(const char *FUNC, const char *FMT, ...)
 	    vsnprintf(msg, sizeof(msg), FMT, args);
 		printf(
 			"\e[33mDEBUG\e[39m(\e[32m%s\e[39m) %s\n"
-			"\e[90m[press ENTER to continue...\e[39m",
+			"\e[90m[press ENTER to continue...]\e[39m",
 			FUNC, msg
 		);
 		getchar();
@@ -247,6 +247,7 @@ static struct argp_option options[] = {
 	{"fps", 'f', "[target fps]", 0, "Set target fps. Default 15 fps", 3},
 	{"origfps", 'F', 0, 0, "Use original fps from video. Default 15 fps", 3},
 	{"no-sound", 's', 0, 0, "disable sound", 3},
+	{"no-info", 'i', 0, 0, "disable video information", 3},
 	{ 0 }
 };
 
@@ -258,6 +259,7 @@ struct args {
 	int fpsFlag;
 	int sound;
 	int youtube;
+	int info;
 };
 
 static error_t parse_option(int key, char *arg, struct argp_state *state)
@@ -292,6 +294,9 @@ static error_t parse_option(int key, char *arg, struct argp_state *state)
 		case 'y':
 			args->youtube = 1;
 			break;
+		case 'i':
+			args->info = 1;
+			break;
 		case ARGP_KEY_END:
 			if(args->input == NULL)
 				argp_usage( state );
@@ -317,6 +322,12 @@ struct argp argp = {
 float min(float a, float b)
 {
 	if(a < b) return(a);
+	else return(b);
+}
+
+int max(int a, int b)
+{
+	if(a > b) return(a);
 	else return(b);
 }
 
@@ -405,6 +416,17 @@ char *replaceWord(const char *STRING, const char *OLD, const char *NEW)
 
     result[i] = '\0';
     return result;
+}
+
+int getDigits(int input)
+{
+	int count = 0;
+	do
+    {
+        count++;
+        input /= 10;
+    } while(input != 0);
+	return(count);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -637,8 +659,10 @@ Image scaleImage(Image oldImage, float zoomX, float zoomY)
 // Video
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-void playVideo(const VideoInfo INFO, const int SOUND)
+void playVideo(const VideoInfo INFO, const int SOUND, const int BAR)
 {
+	int height = getWinHeight();
+
 	debug("tmp folder: %s", TMP_FOLDER);
 
 	Image prevImage;
@@ -672,41 +696,80 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 		"starting audio (%s) and video (%d fps)", audioDir, INFO.fps
 	);
 
-	if(SOUND == 1) playAudio(audioDir);
-
-	float sTime = getTime();
-	int currentFrame = 1;
-	int prevFrame = 0;
+	float startTime = getTime();
 
 	clear();
 
+	if(SOUND == 1) playAudio(audioDir);
+
 	while(1)
 	{
+		float time = getTime() - startTime;
 		char file[1000];
-		currentFrame = (int)floor(INFO.fps * (getTime() - sTime));
+		int currentFrame = (int)floor(INFO.fps * time);
 		// frames start from 1
 		if(currentFrame < 1)currentFrame = 1;
+
 		sprintf(file, "%s/frame%d.bmp", TMP_FOLDER, currentFrame);
 
-		if(currentFrame != prevFrame) // don't draw same frame twice
+		if(access(file, F_OK) != - 1)
 		{
-			if(access(file, F_OK) != - 1)
+			Image currentImage = loadImage(file);
+			updateScreen(currentImage, prevImage);
+			prevImage = copyImage(currentImage);
+			freeImage(&currentImage);
+		}
+		else
+		{
+			error("next file (%s) not found", file);
+			freeImage(&prevImage);
+			break;
+		}
+
+		if(time > INFO.duration)
+		{
+			freeImage(&prevImage);
+			break;
+		}
+
+		if(BAR == 0)
+		{
+			//move cursor to bottom left
+			printf("\033[%d;%dH", height, 0);
+
+			// reset colors
+			printf("\e[40m\e[97m");
+
+			//print time
+			printf(
+				"%02d:%02d / %02d:%02d ",
+				(int)(time / 60),
+				(int)time % 60,
+				(int)(INFO.duration / 60),
+				(int)INFO.duration % 60
+			);
+
+			int offset = max(2, getDigits((int)(time / 60)))
+				+ max(2, getDigits((int)(INFO.duration / 60))) + 11;
+
+			int lineLength
+				= (int)((float)(INFO.width - offset) * (time / INFO.duration));
+
+			// print red bar
+			printf("\e[31m");
+			for(int i = 0; i < lineLength; i++)
 			{
-				Image currentImage = loadImage(file);
-				updateScreen(currentImage, prevImage);
-				prevImage = copyImage(currentImage);
-				freeImage(&currentImage);
-				// delete old frames
-				remove(file);
+				printf("▬");
 			}
-			else
+
+			// print gray bar
+			printf("\e[90m");
+			for(int i = 0; i < INFO.width - offset - lineLength; i++)
 			{
-				debug("next file (%s) not found", file);
-				freeImage(&prevImage);
-				break;
+				printf("▬");
 			}
 		}
-		prevFrame = currentFrame;
+
 	}
 	freeImage(&prevImage);
 }
@@ -743,11 +806,12 @@ VideoInfo getVideoInfo(const char TARGET[])
 	}
 
 	info.fps = formatCtx->streams[index]->r_frame_rate.num;
-	info.frameCount = formatCtx->streams[index]->duration;
+	info.duration = formatCtx->duration / AV_TIME_BASE;
 
 	debug(
-		"got video info: %d * %d, fps = %d, frameCount = %d",
-		info.width, info.height, info.fps, info.frameCount
+		"got video info: %d * %d, fps = %d, time = %f[min]",
+		info.width, info.height, info.fps,
+		info.duration / 60
 	);
 
 	free(formatCtx);
@@ -804,7 +868,8 @@ void cleanup()
 
 void video(
 	const int WIDTH, const int HEIGHT,
-	const int FPS, const int FLAG, const char INPUT[], const int SOUND
+	const int FPS, const int FLAG, const char INPUT[],
+	const int SOUND, const int BAR
 )
 {
 	debug("target: %s", INPUT);
@@ -842,6 +907,9 @@ void video(
 
 	debug("zoom: x: %f,  y: %f", zoomX, zoomY);
 
+	info.width *= zoomX;
+	info.height *= zoomY;
+
 	if(FLAG == 0)
 		info.fps = DEFAULT_FPS;
 
@@ -878,7 +946,7 @@ void video(
 		commandB,
 		"ffmpeg -i \"%s\" -vf \"fps=%d, scale=%d:%d\" \"%s/frame%%d.bmp\"\
  >>/dev/null 2>>/dev/null",
-		INPUT, info.fps, (int)(info.width * zoomX), (int)(info.height * zoomY),
+		INPUT, info.fps, (int)(info.width), (int)(info.height),
 		dir
 	);
 
@@ -897,7 +965,7 @@ void video(
 		// wait for first image (ffmpeg takes time to start)
 		while(access(TARGET, F_OK) == -1){}
 		// play the video
-		playVideo(info, SOUND);
+		playVideo(info, SOUND, BAR);
 	}
 	else
 	{
@@ -986,7 +1054,8 @@ void image(const int WIDTH, const int HEIGHT, const char INPUT[])
 
 void youtube(
 	const int WIDTH, const int HEIGHT,
-	const int FPS, const int FLAG, const char INPUT[], const int SOUND
+	const int FPS, const int FLAG, const char INPUT[],
+	const int SOUND, const int BAR
 )
 {
 	//check if youtube-dl is installed
@@ -1028,7 +1097,7 @@ void youtube(
 
 	debug("finished downloading video");
 
-	video(WIDTH, HEIGHT, FPS, FLAG, dir, SOUND);
+	video(WIDTH, HEIGHT, FPS, FLAG, dir, SOUND, BAR);
 }
 
 //---- main ------------------------------------------------------------------//
@@ -1048,6 +1117,7 @@ int main(int argc, char *argv[])
 	args.height = -1;
 	args.sound = 1;
 	args.youtube = 0;
+	args.info = 0;
 
 	argp_parse(&argp, argc, argv, 0, 0, &args);
 
@@ -1056,7 +1126,8 @@ int main(int argc, char *argv[])
 		debug("youtube mode");
 		youtube(
 			args.width, args.height, args.fps,
-			args.fpsFlag, args.input, args.sound
+			args.fpsFlag, args.input,
+			args.sound, args.info
 		);
 	}
 	else
@@ -1064,7 +1135,7 @@ int main(int argc, char *argv[])
 		debug("target file: %s", args.input);
 
 		if(access(args.input, F_OK) == -1)
-			error("%s does not exist", args.input);
+			error("%s does not exist. If it is a url use the -y flag", args.input);
 
 		char *ext = getExtension(args.input);
 
@@ -1077,7 +1148,8 @@ int main(int argc, char *argv[])
 		else if(fileType == 2)
 			video(
 				args.width, args.height, args.fps,
-				args.fpsFlag, args.input, args.sound
+				args.fpsFlag, args.input,
+				args.sound, args.info
 			);
 		else
 			error("invalid file type");
