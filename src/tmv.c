@@ -713,6 +713,8 @@ void playVideo(const VideoInfo INFO, const int SOUND)
 
 VideoInfo getVideoInfo(const char TARGET[])
 {
+	av_register_all();
+
 	VideoInfo info;
 
 	AVFormatContext *formatCtx = avformat_alloc_context();
@@ -722,7 +724,9 @@ VideoInfo getVideoInfo(const char TARGET[])
 
 	debug("allocated memory for formatCtx");
 
-	avformat_open_input(&formatCtx, TARGET, NULL, NULL);
+	if(avformat_open_input(&formatCtx, TARGET, NULL, NULL) < 0)
+		error("failed to open file");
+
 	avformat_find_stream_info(formatCtx,  NULL);
 
 	int index = 0;
