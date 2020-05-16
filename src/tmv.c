@@ -502,7 +502,8 @@ void playAudio(const char PATH[])
 
     result = ma_decoder_init_file(PATH, NULL, &decoder);
 
-	if(result != MA_SUCCESS) error("could not initialize decoder");
+	if(result != MA_SUCCESS)
+		error("could not initialize decoder (use -s to disable audio)");
 
     deviceConfig = ma_device_config_init(ma_device_type_playback);
     deviceConfig.playback.format   = decoder.outputFormat;
@@ -513,11 +514,13 @@ void playAudio(const char PATH[])
 
     result = ma_device_init(NULL, &deviceConfig, &device);
 
-	if(result != MA_SUCCESS) error("could not initialize device");
+	if(result != MA_SUCCESS)
+		error("could not initialize device (use -s to disable audio)");
 
     result = ma_device_start(&device);
 
-	if(result != MA_SUCCESS) error("could not start device");
+	if(result != MA_SUCCESS)
+		error("could not start device (use -s to disable audio)");
 }
 
 void stopAudio()
