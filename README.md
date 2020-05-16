@@ -78,6 +78,7 @@
 * `libavcodec-dev`
 * `libavformat-dev`
 * `libavfilter-dev`
+* `libavdevice-dev`
 
 **Instructions:**
 1. Clone the repository.  
