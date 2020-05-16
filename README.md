@@ -65,6 +65,8 @@
 		Use original fps from video (default 15 fps)
 	* `-s`, `--no-sound`   
 		Disable sound
+	* `-i`, `--no-info`   
+		Disable progress bar for videos
 	* `-?`, `--help `  
 		Display help
 	* `-V`  
@@ -73,34 +75,41 @@
 ----
 
 ### Installation
+
 #### Linux
-**Requirements:**
-* `libavcodec-dev`
-* `libavformat-dev`
-* `libavfilter-dev`
-* `libavdevice-dev`
 
 **Instructions:**
-1. Clone the repository.  
-	`git clone https://github.com/kal39/TerminalMediaViewer.git`
-2. `cd TerminalMediaViewer`
-3. You can either build the the program locally with `make` or install the program to `/usr/local/bin/` with `make install` (needs sudo privileges).
+1. Install dependencies.  
+	* `libavcodec-dev`
+	* `libavformat-dev`
+	* `libavfilter-dev`
+	* `libavdevice-dev`
 
-To uninstall run `make uninstall` (needs sudo privileges).
+	In addition, to watch videos install:
+	* `ffmpeg`
+	* `youtube-dl`
+2. Clone the repository and run make.
+	```
+	git clone https://github.com/kal39/TerminalMediaViewer.git
+	cd TerminalMediaViewer
+	make
+	```
+	To install tmv to `/usr/local/bin` you can run `make install` (needs sudo privileges).  
+	To uninstall run `make uninstall` (needs sudo privileges).
 
 #### MacOS
+
 **Requirements:**
-* [`homebrew`](https://docs.brew.sh)
+* `homebrew`
 * `iterm2`
-* `ffmpeg`
-* `youtube-dl`
-* `argp-standalone`
 
 **Instructions:**  
 1. Install dependencies
 	```
-	brew install iterm2
 	brew install argp-standalone
+	```
+	In addition, to watch videos:
+	```
 	brew install ffmpeg
 	brew install youtube-dl
 	```
@@ -110,19 +119,12 @@ To uninstall run `make uninstall` (needs sudo privileges).
 	cd TerminalMediaViewer
 	make
 	```
-	To install tmv you can run `make install` (needs sudo privileges).  
+	To install tmv to `/usr/local/bin` you can run `make install` (needs sudo privileges).  
 	To uninstall run `make uninstall` (needs sudo privileges).
-
 
 > **Only works on iTerm2.**
 
 > There are some performance issues. Depending on the video encoding, your mileage may vary.
-
-----
-
-### Binaries
-
-You can download pre-built binaries from the [**releases**](https://github.com/kal39/TerminalMediaViewer/releases) page.
 
 ----
 

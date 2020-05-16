@@ -247,7 +247,7 @@ static struct argp_option options[] = {
 	{"fps", 'f', "[target fps]", 0, "Set target fps. Default 15 fps", 3},
 	{"origfps", 'F', 0, 0, "Use original fps from video. Default 15 fps", 3},
 	{"no-sound", 's', 0, 0, "disable sound", 3},
-	{"no-info", 'i', 0, 0, "disable video information", 3},
+	{"no-info", 'i', 0, 0, "disable progress bar for videos", 3},
 	{ 0 }
 };
 
