@@ -259,7 +259,7 @@ struct args {
 	int fpsFlag;
 	int sound;
 	int youtube;
-	int info;
+	int bar;
 };
 
 static error_t parse_option(int key, char *arg, struct argp_state *state)
@@ -295,7 +295,7 @@ static error_t parse_option(int key, char *arg, struct argp_state *state)
 			args->youtube = 1;
 			break;
 		case 'i':
-			args->info = 1;
+			args->bar = 1;
 			break;
 		case ARGP_KEY_END:
 			if(args->input == NULL)
@@ -1117,7 +1117,7 @@ int main(int argc, char *argv[])
 	args.height = -1;
 	args.sound = 1;
 	args.youtube = 0;
-	args.info = 0;
+	args.bar = 0;
 
 	argp_parse(&argp, argc, argv, 0, 0, &args);
 
@@ -1127,7 +1127,7 @@ int main(int argc, char *argv[])
 		youtube(
 			args.width, args.height, args.fps,
 			args.fpsFlag, args.input,
-			args.sound, args.info
+			args.sound, args.bar
 		);
 	}
 	else
@@ -1149,7 +1149,7 @@ int main(int argc, char *argv[])
 			video(
 				args.width, args.height, args.fps,
 				args.fpsFlag, args.input,
-				args.sound, args.info
+				args.sound, args.bar
 			);
 		else
 			error("invalid file type");
