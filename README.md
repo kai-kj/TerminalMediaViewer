@@ -8,7 +8,6 @@
 	<br>
 	<img src="https://img.shields.io/github/issues/kal39/TerminalMediaViewer">
 	<img src="https://img.shields.io/github/v/release/kal39/TerminalMediaViewer?sort=semver">
-	<img src="https://img.shields.io/github/workflow/status/kal39/TerminalMediaViewer/make/master">
 	</p>
 </p>
 
