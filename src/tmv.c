@@ -108,13 +108,6 @@ SOFTWARE.
 #define STB_IMAGE_IMPLEMENTATION
 #include "include/stb_image.h"
 
-// playing audio files <https://github.com/dr-soft/miniaudio>
-#define DR_WAV_IMPLEMENTATION
-#include "include/dr_wav.h"
-
-#define MINIAUDIO_IMPLEMENTATION
-#include "include/miniaudio.h"
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Image / Video format lists
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -498,61 +491,6 @@ void updateScreen(Image image, Image prevImage)
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-// Audio
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-
-void data_callback(
-	ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount
-)
-{
-    ma_decoder* pDecoder = (ma_decoder*)pDevice->pUserData;
-    if (pDecoder == NULL) {
-        return;
-    }
-
-    ma_decoder_read_pcm_frames(pDecoder, pOutput, frameCount);
-
-    (void)pInput;
-}
-
-ma_decoder decoder;
-ma_device device;
-
-void playAudio(const char PATH[])
-{
-    ma_result result;
-    ma_device_config deviceConfig;
-
-    result = ma_decoder_init_file(PATH, NULL, &decoder);
-
-	if(result != MA_SUCCESS)
-		error("could not initialize decoder (use -s to disable audio)");
-
-    deviceConfig = ma_device_config_init(ma_device_type_playback);
-    deviceConfig.playback.format   = decoder.outputFormat;
-    deviceConfig.playback.channels = decoder.outputChannels;
-    deviceConfig.sampleRate        = decoder.outputSampleRate;
-    deviceConfig.dataCallback      = data_callback;
-    deviceConfig.pUserData         = &decoder;
-
-    result = ma_device_init(NULL, &deviceConfig, &device);
-
-	if(result != MA_SUCCESS)
-		error("could not initialize device (use -s to disable audio)");
-
-    result = ma_device_start(&device);
-
-	if(result != MA_SUCCESS)
-		error("could not start device (use -s to disable audio)");
-}
-
-void stopAudio()
-{
-	ma_device_uninit(&device);
-    ma_decoder_uninit(&decoder);
-}
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Image
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
@@ -701,7 +639,19 @@ void playVideo(const VideoInfo INFO, const int SOUND, const int BAR)
 
 	clear();
 
-	if(SOUND == 1) playAudio(audioDir);
+	int sPid;
+
+	if(SOUND == 1)
+	{
+		sPid = fork();
+
+		if(sPid == 0)
+		{
+			char command[1000];
+			sprintf(command, "play %s >>/dev/null 2>>/dev/null", audioDir);
+			system(command);
+		}
+	}
 
 	while(1)
 	{
@@ -856,8 +806,6 @@ void cleanup()
 
 	debug("deleted %d images", count);
 
-	stopAudio();
-
 	exit(0);
 }
 
@@ -960,7 +908,6 @@ void video(
 
 	if(pid == 0)
 	{
-
 		char TARGET[1000];
 		sprintf(TARGET, "%s/frame%d.bmp", dir, 1);
 		// wait for first image (ffmpeg takes time to start)
