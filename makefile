@@ -1,9 +1,24 @@
+#---- colors ------------------------------------------------------------------#
+
+BLACK        := $(shell tput -Txterm setaf 0)
+RED          := $(shell tput -Txterm setaf 1)
+GREEN        := $(shell tput -Txterm setaf 2)
+YELLOW       := $(shell tput -Txterm setaf 3)
+LIGHTPURPLE  := $(shell tput -Txterm setaf 4)
+PURPLE       := $(shell tput -Txterm setaf 5)
+BLUE         := $(shell tput -Txterm setaf 6)
+WHITE        := $(shell tput -Txterm setaf 7)
+RESET		 := $(shell tput -Txterm sgr0)
+
+#---- get info ----------------------------------------------------------------#
 OS = $(shell uname)
 SFLAG = $(shell id -u)
 
 ifeq ($(OS), )
 	OS = Windows
 endif
+
+#---- set commands ------------------------------------------------------------#
 
 CC = gcc
 
@@ -13,9 +28,11 @@ else
 	RM = rm -f
 endif
 
+#---- set target and flags ----------------------------------------------------#
+
 TARGET = tmv
 
-FLAGS = -lm -lavcodec -lavformat -lavfilter -lavdevice -lswresample -lswscale -lavutil -lpthread -ldl -largp
+FLAGS = -lm -lavcodec -lavformat -lavfilter -lavdevice -lswresample -lswscale -lavutil -lpthread -ldl
 OSXFLAGS = -lm -lavcodec -lavformat -lavfilter -lavdevice -lswresample -lswscale -lavutil -lpthread -ldl -largp
 
 #---- no debug flags ----------------------------------------------------------#
@@ -25,31 +42,31 @@ release: clean
 ifeq ($(OS), Darwin)
 # osx
 	@echo "Building for osx..."
-	@$(CC) src/$(TARGET).c $(OSXFLAGS) -o $(TARGET)
+	@$(CC) -w src/$(TARGET).c $(OSXFLAGS) -o $(TARGET)
 else ifeq ($(OS), Windows)
 # windows
 	@echo "Building for windows..."
-	@$(CC) src\$(TARGET).c -o $(TARGET)
+	@$(CC) -w src\$(TARGET).c -o $(TARGET)
 else
 # linux
 	@echo "Building for linux..."
-	@$(CC) src/$(TARGET).c $(FLAGS) -o $(TARGET)
+	@$(CC) -w src/$(TARGET).c $(FLAGS) -o $(TARGET)
 endif
-	@echo "\e[32mDONE\e[39m"
+	@echo "$(GREEN)DONE$(RESET)"
 
-ifeq (, $(shell which ffmpeg))
-	@echo "\e[33mNOTE\e[39m: ffmpeg is not installed (can't play videos)"
+ifeq (, $(@shell which ffmpeg))
+	@echo "$(YELLOW)NOTE$(RESET): ffmpeg is not installed (can't play videos)"
 endif
 
-ifeq (, $(shell which youtube-dl))
-	@echo "\e[33mNOTE\e[39m: youtube-dl is not installed (can't download videos)"
+ifeq (, $(@shell which youtube-dl))
+	@echo "$(YELLOW)NOTE$(RESET): youtube-dl is not installed (can't download videos)"
 endif
 
 #---- enable debug flags ------------------------------------------------------#
 debug: clean
 	@echo "Building with debug flag"
 	@$(CC) -Wall src/$(TARGET).c $(FLAGS) -D DEBUG -o $(TARGET)
-	@echo "\e[32mDONE\e[39m"
+	@echo "$(GREEN)DONE$(RESET)"
 
 #---- make release and install to /usr/local/bin/ -----------------------------#
 install: uninstall release
@@ -57,9 +74,9 @@ install: uninstall release
 ifeq ($(SFLAG), 0)
 	@echo "Installing..."
 	@mv $(TARGET) /usr/local/bin
-	@echo "\e[32mDONE\e[39m"
+	@echo "$(GREEN)DONE$(RESET)"
 else
-	@echo "\e[31mERROR\e[39m: sudo privileges needed for install"
+	@echo "$(RED)ERROR$(RESET): sudo privileges needed for install"
 endif
 
 #---- remove /usr/local/bin/tmv -----------------------------------------------#
@@ -68,9 +85,9 @@ uninstall:
 ifeq ($(SFLAG), 0)
 	@echo "Uninstalling..."
 	@$(RM) /usr/local/bin/$(TARGET)
-	@echo "\e[32mDONE\e[39m"
+	@echo "$(GREEN)DONE$(RESET)"
 else
-	@echo "\e[31mERROR\e[39m: sudo privileges needed for uninstall"
+	@echo "$(RED)ERROR$(RESET): sudo privileges needed for uninstall"
 endif
 
 #---- for debuging with gdb ---------------------------------------------------#
@@ -86,4 +103,4 @@ clean:
 	@echo "Deleting old binaries..."
 	@$(RM) $(TARGET)
 	@$(RM) $(TARGET).x
-	@echo "\e[32mDONE\e[39m"
+	@echo "$(GREEN)DONE$(RESET)"
