@@ -55,11 +55,11 @@ endif
 	@echo "$(GREEN)DONE$(RESET)"
 
 ifeq (, $(@shell which ffmpeg))
-	@echo "$(YELLOW)NOTE$(RESET): ffmpeg is not installed (can't play videos)"
+	@echo "$(YELLOW)NOTE$(RESET): ffmpeg may not be installed (can't play videos)"
 endif
 
 ifeq (, $(@shell which youtube-dl))
-	@echo "$(YELLOW)NOTE$(RESET): youtube-dl is not installed (can't download videos)"
+	@echo "$(YELLOW)NOTE$(RESET): youtube-dl may not be installed (can't download videos)"
 endif
 
 #---- enable debug flags ------------------------------------------------------#
@@ -104,3 +104,5 @@ clean:
 	@$(RM) $(TARGET)
 	@$(RM) $(TARGET).x
 	@echo "$(GREEN)DONE$(RESET)"
+	@echo "Deleting log files..."
+	@$(RM) log.txt
