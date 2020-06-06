@@ -850,6 +850,7 @@ void videoLoop(const VideoInfo INFO, const int SOUND, const int BAR)
 
 	float pauseStart = 0;
 
+	// main loop
 	while(1)
 	{
 		if(kbhit())
@@ -902,7 +903,6 @@ void videoLoop(const VideoInfo INFO, const int SOUND, const int BAR)
 		if(frame < 1)
 			frame = 1;
 
-		userInput();
 		int check = displayFrame(frame);
 
 		if(check == 1)
@@ -961,6 +961,43 @@ VideoInfo getVideoInfo(const char TARGET[])
 	return(info);
 }
 
+void decodeVideo(const char INPUT[], const VideoInfo VIDINFO)
+{
+	struct stat sb;
+
+	// make /tmp/tmv folder if none exists
+	if(stat(TMP_FOLDER, &sb) != 0)
+	{
+		log("could not find tmp folder");
+		mkdir(TMP_FOLDER, 0700);
+		log("created tmp folder: %s", TMP_FOLDER);
+	}
+
+	char commandA[1000], commandB[1000];
+
+	// decode video with ffmpeg into audio
+	sprintf(
+		commandA,
+		"ffmpeg -i \"%s\" -f wav \"%s/audio.wav\" >>/dev/null 2>>/dev/null",
+		INPUT, TMP_FOLDER
+	);
+
+	// decode video with ffmpeg into bmp files
+	sprintf(
+		commandB,
+		"ffmpeg -i \"%s\" -vf \"fps=%d, scale=%d:%d\" \"%s/frame%%d.bmp\"\
+ >>/dev/null 2>>/dev/null",
+		INPUT, VIDINFO.fps, (int)(VIDINFO.width), (int)(VIDINFO.height),
+		TMP_FOLDER
+	);
+
+	log("audio command: %s", commandA);
+	log("video command: %s", commandB);
+
+	system(commandA);
+	system(commandB);
+}
+
 void initVideo(
 	const int WIDTH, const int HEIGHT,
 	const int FPS, const int FLAG, const char INPUT[],
@@ -990,41 +1027,6 @@ void initVideo(
 	if(FPS != -1)
 		vidInfo.fps = FPS;
 
-	char dir[] = TMP_FOLDER;
-
-	log("tmp folder: %s", dir);
-
-	struct stat sb;
-
-	// make /tmp/tmv folder if none exists
-	if(stat(dir, &sb) != 0)
-	{
-		log("could not find tmp folder");
-		mkdir(dir, 0700);
-		log("created tmp folder: %s", dir);
-	}
-
-	// decode video with ffmpeg into audio
-	char commandA[1000];
-	sprintf(
-		commandA,
-		"ffmpeg -i \"%s\" -f wav \"%s/audio.wav\" >>/dev/null 2>>/dev/null",
-		INPUT, dir
-	);
-
-	// decode video with ffmpeg into bmp files
-	char commandB[1000];
-	sprintf(
-		commandB,
-		"ffmpeg -i \"%s\" -vf \"fps=%d, scale=%d:%d\" \"%s/frame%%d.bmp\"\
- >>/dev/null 2>>/dev/null",
-		INPUT, vidInfo.fps, (int)(vidInfo.width), (int)(vidInfo.height),
-		dir
-	);
-
-	log("audio command: %s", commandA);
-	log("video command: %s", commandB);
-
 	log("forking");
 
 	// child = plays video, parent = decodes
@@ -1033,7 +1035,7 @@ void initVideo(
 	if(pid == 0)
 	{
 		char TARGET[1000];
-		sprintf(TARGET, "%s/frame%d.bmp", dir, 1);
+		sprintf(TARGET, "%s/frame1.bmp", TMP_FOLDER);
 		// wait for first image (ffmpeg takes time to start)
 		while(access(TARGET, F_OK) == -1){}
 		// play the video
@@ -1041,9 +1043,7 @@ void initVideo(
 	}
 	else
 	{
-		// audio first
-		system(commandA);
-		system(commandB);
+		decodeVideo(INPUT, vidInfo);
 		wait(NULL);
 	}
 }

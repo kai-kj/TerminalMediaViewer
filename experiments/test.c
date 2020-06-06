@@ -1,129 +1,38 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
-#include <sys/select.h>
-#include <termios.h>
-#include <sys/time.h>
+#include <sys/types.h>
+#include <signal.h>
+#include <stdio.h>
 
-struct termios orig_termios;
-
-float getTime()
+int main()
 {
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	long int time = (long int)((tv.tv_sec) * 1000 + (tv.tv_usec) / 1000);
-	return((float)(time % 10000000) / 1000);
-}
+  pid_t childPID = fork();
 
-void reset_terminal_mode()
-{
-	tcsetattr(0, TCSANOW, &orig_termios);
-}
+  if ( childPID == -1 )
+  {
+    printf( "failed to fork child\n" );
+    _exit( 1 );
+  }
+  else if ( childPID == 0 )
+  {
+    char *args[] = { "ping", "localhost", 0 };
 
-void set_conio_terminal_mode()
-{
-	struct termios new_termios;
+    execv( "/bin/ping", args );
+  }
 
-	tcgetattr(0, &orig_termios);
-	memcpy(&new_termios, &orig_termios, sizeof(new_termios));
+  while ( 1 )
+  {
+    printf( "Enter 'q' to kill child process...\n" );
+    char c = getchar();
 
-	atexit(reset_terminal_mode);
-	cfmakeraw(&new_termios);
-	tcsetattr(0, TCSANOW, &new_termios);
-}
+    if ( c == 'q' )
+    {
+      kill( childPID, SIGKILL );
+    }
 
-int kbhit()
-{
-	struct timeval tv = { 0L, 0L };
-	fd_set fds;
-	FD_ZERO(&fds);
-	FD_SET(0, &fds);
-	return select(1, &fds, NULL, NULL, &tv);
-}
+    printf("waiting...\n");
 
-int getch()
-{
-	int r;
-	unsigned char c;
-	if ((r = read(0, &c, sizeof(c))) < 0) {
-		return r;
-	} else {
-		return c;
-	}
-}
+    sleep(1);
+  }
 
-int main(int argc, char *argv[])
-{
-	int key;
-
-	fflush(stdout);
-
-	set_conio_terminal_mode();
-
-	int pause = 0;
-
-	float startTime = getTime();
-
-	float offset = 0;
-	float pauseTime = 0;
-
-	float pauseStart = 0;
-
-	while(1)
-	{
-		if(kbhit())
-		{
-
-			key = getch();
-
-			if(key == 3)
-				break;
-			
-			else if(key == 27)
-			{
-				getch();
-				key = getch();
-				switch(key)
-				{
-					case 67:
-						offset -= 5;
-						break;
-					case 68:
-						offset += 5;
-						break;
-				}
-			}
-			else if(key == ' ')
-			{
-				if(pause == 1)
-					pause = 0;
-				else if( pause == 0)
-				{
-					pause = 1;
-					pauseStart = getTime();
-				}
-			}
-		}
-
-		if(pause == 1)
-			pauseTime = getTime() - pauseStart;
-
-		float time = getTime() - startTime - offset - pauseTime;
-
-		if(time < 0)
-		{
-			offset += getTime() - startTime - offset - pauseTime;
-			time = getTime() - startTime - offset - pauseTime;
-		}
-		
-		system("clear");
-		printf("time: %f | ", time);
-		printf("start time: %f | ", startTime);
-		printf("pause: %d | ", pause);
-		printf("pause +  offset: %f\n", pauseTime + offset);
-
-	}
-
-	reset_terminal_mode();
-}
+  return 0;
+}  
