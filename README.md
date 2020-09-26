@@ -9,6 +9,9 @@
 	<img src="https://img.shields.io/github/issues/kal39/TerminalMediaViewer">
 	<img src="https://img.shields.io/github/v/release/kal39/TerminalMediaViewer?sort=semver">
 	</p>
+	<br>
+	<h3 align="center"> >>> Improved version at <a href="https://github.com/kal39/ptmv/">PyTerminalMediaViewer</a> <<< </h3>
+	<br>
 </p>
 
 ----
